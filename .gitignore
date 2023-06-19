@@ -1,0 +1,13 @@
+*.out
+*.aux
+*.bib
+*eps-converted-to.pdf
+*.bbl
+*.blg
+*.log
+*.o
+*.d
+*.asv
+toy
+*.dat
+*.odt#
