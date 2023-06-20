@@ -1,7 +1,8 @@
 import numpy as np
 import imageio
 from matplotlib import pyplot as pt
-
+large_width = 400
+np.set_printoptions(linewidth=large_width)
 np.random.seed(0) #enable for reproducable randomness
 
 nData = 18

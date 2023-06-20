@@ -568,4 +568,32 @@
 						\end{cases}
 					\end{equation}
 					Recalling that $\T[m] = Q_m$ is the BLP solution, we see that the Best-Linear-Bounded-Predictor simplifies trivially to the BLP subject to a floor-and-ceiling truncation.
+
+				\subsection*{The Minimum Gradient Case: BLMGP}
+
+					Suppose that we know that a predictor should everywhere have a minimum gradient $G$, such that:
+					\begin{spalign}
+						\hat{X}_{t} \geq \hat{X}_{s} +  G(t-s)
+					\end{spalign}
+					This uncoding is slightly unusual insofar as it is a function of $t$ as well as $\hat{X}_t$, but since the set $T$ must be determined before the optimisation, this is not particularly a problem. 
+					
+					We therefore generate a vector $\vec{\Delta}$, such that $\Delta_i = t_{i} - t_{i-1}$. The encoding therefore is simply:
+					\begin{spalign}
+						\T(\vec{z}) = \begin{cases}
+							z_0 & i = 0
+							\\
+							\T[i-1](\vec{z}) + G \Delta_i + e^{z_i} & \text{else}
+						\end{cases}
+					\end{spalign}
+					Note that if $G = 0$ then we have recovered our monotonic predictor. Since $g$ and $\Delta_i$ are constants, the derivative is the same as the BLMP:
+					Which gives the derivative:
+					\begin{spalign}
+						\pdiv{\T}{z_m} = \begin{cases} 
+							1 & \text{ if } m = 0 
+							\\
+							e^{z_m} & \text{ if } 0 < m \leq i
+							\\
+							0 & \text{else}
+						\end{cases}
+					\end{spalign}
 \end{document}
