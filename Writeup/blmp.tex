@@ -596,4 +596,32 @@
 							0 & \text{else}
 						\end{cases}
 					\end{spalign}
+
+				\subsection{The Smooth Positive Case: BLSPP}
+
+					A notable feature of some of the other predictors is that, when they reach the edge of their constraints, a hard boundary is formed -- a predictor which is constrained to $\hat{X}_t \geq 0$ will follow an unconstrained predictor at positive values, only to display a discontinuous derivative when the predictor tries to go negative. 
+					
+					We might therefore attempt to concoct a predictor which is both \textit{positive} and \textit{smooth}.
+
+					\begin{spalign}
+						\ell_i & = \begin{cases} z_0 & i = 0
+							\\
+							\ell_{i-1}+ \alpha \left( \frac{e^x -1}{e^x +1} \right) & \text{else}
+						\end{cases}
+							\\
+						\T({\vec{z}}) & = \exp(\ell_i)
+					\end{spalign}
+					The exponential term in $\T$ ensures that the predictor is always positive, whilst the $\alpha$ term controls how different $\ell_{i}$ and $\ell_{i-1}$ are allowed to be, forcing the bound such that for $\alpha > 0$:
+					\begin{spalign}
+						e^{-\alpha}\T[i-1]  \leq \T \leq e^{\alpha} \T[i-1] 
+					\end{spalign}
+					This then enforces a smoothness condition. The derivative of this transform is:
+					\begin{spalign}
+						\pdiv{\T}{z_m} = \begin{cases} \T & \text{if } m = 0
+							\\
+							2\alpha \T \frac{e^{z_m}}{(1 + e^{z_m})^2} & 0 < m \leq i
+							\\
+							0 &\text{else}
+						\end{cases}
+					\end{spalign}
 \end{document}

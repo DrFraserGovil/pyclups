@@ -11,12 +11,12 @@ import warnings
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
-kernelSigma = 3
+kernelSigma = 1
 
-dataNoise = 0.01
+dataNoise = 0.05
 learningRate = 0.1
-learningMemory = 0.9
-learningMemory_SecondMoment = 0.999
+learningMemory = 0.8
+learningMemory_SecondMoment = 0.99
 
 def kernel(x,y):
 	#covariance the kernel
@@ -45,7 +45,7 @@ def BLP(predictT,dataT,dataX):
 	muData = Prior(dataT)#np.mean(dataX)
 	
 	#precompute some useful quantities
-	K=kernelMatrix(dataT) + (dataNoise/10)**2 * np.identity(len(dataT))
+	K=kernelMatrix(dataT) + (dataNoise/2)**2 * np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	KinvX = np.matmul(Kinv,dataX-muData)
 
@@ -76,7 +76,7 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	gPredict = Prior(predictX)
 	tData = dataX - Prior(dataT)
 	#precompute values as before
-	K=kernelMatrix(dataT) + (dataNoise/10)**2 * np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	K=kernelMatrix(dataT) + (dataNoise/2)**2 * np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	mu = 0# np.mean(dataX)
 	w = np.matmul(Kinv,tData)
@@ -101,18 +101,23 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	#learning rate and memory parameters defined globally for ease
 
 	#generate empty gradient vector
-	
+	grad = np.zeros(len(zs))
 	for s in range(steps):
 		# print(s)
 		T = Transform(zs)
-		grad = np.zeros(len(zs))
+		# if s == steps -1:
+		# 	print("final pos",T,"\n",zs)
 		for j in range(len(zs)):
 			dTdz_j = TransformDerivative(zs,j)
 			# print("grad",grad,"\n","pos",T)
 			# grad[j] += 2 * (T[j] - Q[j])
+			g = 0
 			for i in range(len(T)):
-				grad[j] += 2 * (T[i] - Q[i]) * dTdz_j[i]
-		
+				g += 2 * (T[i] - Q[i]) * dTdz_j[i]
+				# if s == steps -1:
+				# 	print("\t",j,(T[i] - Q[i]),dTdz_j[i],g)
+			grad[j] = g
+		# print("grad=",grad)
 		#ADAM step routine
 		ms = learningMemory * ms + (1.0 - learningMemory)*grad
 		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
@@ -123,12 +128,13 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 		# zs -= learningRate * grad
 		#prevents the prediction from 'dying' by going too negative
 		for j in range(1,len(zs)):
-			m = -30
+			m = -20
 			if zs[j] < m:
 				zs[j] = m
-			l = 30
+			l = 20
 			if zs[j] > l:
 				zs[j] = l
+
 	ps = Transform(zs) + mu
 	rms = 0
 	for i in range(len(ps)):
@@ -138,7 +144,7 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	return [ps,np.sqrt(rms)]
 
 
-mode = 1
+mode = 2
 
 if mode == 0:
 	def Transform(z):
@@ -164,28 +170,54 @@ if mode == 1:
 	def Transform(z):
 		out = np.exp(z)
 		out /= (deltaT * np.sum(out))
-		
 		return out
 
 	def TransformDerivative(z,i):
 		T = Transform(z)
-		# N = 1.0/np.sum(T)
 		q = -T*deltaT
 		q[i] += 1
 		return q* T[i]
 		
-		# val = 1
-		# if i > 0:
-		# 	val =np.exp(z[i])
-
-		# out = np.zeros(np.shape(z))
-		# out[i:] = val
-		# return out
 	def Func(t):
 		return 1.0/(np.sqrt(2*np.pi)) * np.exp(- (t)**2/2)
+if mode == 2:
+	alpha = 0.5
+	def Transform(z):
+		li = np.zeros(np.shape(z))
+		li[0] = z[0]
+		li[1:] = alpha * (np.exp(z[1:])-1)/(np.exp(z[1:])+1)
 
-xMin = -5
-xMax = 5
+		out = np.cumsum(li)
+		# print(z)
+		# print(li)
+		# print(np.cumsum(li))
+		# print(out)
+		# p = o
+		return np.exp(out)
+	def TransformDerivative(z,i):
+		# li = np.zeros(np.shape(z))
+		# li[0] = z[0]
+		# li[1:] = alpha * (np.exp(z[1:])-1)/(np.exp(z[1:])+1)
+
+		T= Transform(z)
+		g = np.zeros(np.shape(z))
+		if i == 0:
+			g += T
+		else:
+			
+			g[i:] = 2*alpha*T[i:]*np.exp(-z[i])/(np.exp(-z[i])+1)**2
+		# print("i=",i)
+		# print(z)
+		# print(T)
+		# print(g)
+	
+		return g
+		
+	def Func(t):
+		sig = 1.5
+		return 1.0/(np.sqrt(2*np.pi)*sig) * np.exp(- (t)**2/(2*sig**2))
+xMin = -6
+xMax = 6
 m = (Func(xMax) - Func(xMin))/(xMax - xMin)
 c = Func(xMin) -xMin *m
 def Prior(t):
@@ -193,12 +225,13 @@ def Prior(t):
 	# return Func(t)
 	# return t-t
 def GenerateData(nData):
-	t = np.linspace(xMin,xMax,nData) + np.random.normal(0,1,nData,)
-	x = Func(t) + np.random.normal(0,dataNoise,nData,)
+	# t = np.linspace(xMin,xMax,nData) + np.random.normal(0,1,nData,)
+	t = np.random.uniform(xMin,xMax,nData)
+	x = Func(t) * (1 + np.random.normal(0,dataNoise,nData,))+np.random.normal(0,0.01,nData,)
 
 	return [t,x]
 # np.random.seed(0)
-[t,x] = GenerateData(11)
+[t,x] = GenerateData(51)
 tt = np.linspace(min(t),max(t),1000)
 pt.plot(tt,Func(tt),"k:",label="Underlying function")
 pt.plot(tt,Prior(tt),"r:",label="Prior")
@@ -210,8 +243,8 @@ pt.scatter(t,x,label="Data")
 [ps,rms] = BLP(tt,t,x)
 pt.plot(tt,ps,label="BLP, $\epsilon=$" + strRound(rms))
 print(np.sum(ps) * deltaT)
-zinit = ps.copy()
 
+# zinit = ps.copy()
 # prev = zinit[0]
 # for i in range(1,len(ps)):
 # 	if ps[i] > prev:
@@ -220,9 +253,22 @@ zinit = ps.copy()
 # 	else:
 # 		zinit[i] = -10
 
-[ps,rms] = BLCP(tt,t,x,400,zinit)
+zinit = np.zeros(np.shape(ps))+0.14
+zinit[0] = -2#np.log(np.maximum(ps[0],0.01))
+
+alpha= 2*deltaT
+[ps,rms] = BLCP(tt,t,x,2000,zinit.copy())
 print(np.sum(ps) * deltaT)
-pt.plot(tt,ps,label="BLCP, $\epsilon=$" + strRound(rms))
+pt.plot(tt,ps,label="BLCP-0.1, $\epsilon=$" + strRound(rms))
+
+
+# [ps,rms] = BLCP(tt,t,x,3000,zinit.copy())
+# print(np.sum(ps) * deltaT)
+# pt.plot(tt,ps,label="BLCP-0.1-hi, $\epsilon=$" + strRound(rms))
+
+# [ps,rms] = BLCP(tt,t,x,1500,zinit)
+# print(np.sum(ps) * deltaT)
+# pt.plot(tt,ps,label="BLCP-hi, $\epsilon=$" + strRound(rms))
 
 pt.legend()
 pt.draw()
