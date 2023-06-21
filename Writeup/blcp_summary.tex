@@ -1,0 +1,219 @@
+\documentclass[]{article}
+\usepackage{JML}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{dsfont}
+\usepackage[left=1in,right=1in]{geometry}
+\title{The C-BLP: Constrained Linear Predictors}
+\setlength\parskip{5pt}
+\setlength\parindent{0pt}
+\def\llangle{\left\langle}
+\def\rrangle{\right\rangle}
+\newcommand\E[1]{\llangle #1 \rrangle}
+\newcommand\T[1][i]{\mathcal{T}_{#1}}
+\def\a{\vec{a}_t}
+\def\ai{\vec{a}_{t_i}}
+\def\vi{\vec{v}_i}
+\def\wi{\vec{w}}
+		
+\begin{document}
+	\maketitle
+
+	\section*{The Goal}
+		Consider a second order random process $X$, such that at each value of $t \in \mathbb{R}$, we have a random variable $X_t$. 
+
+		We may randomly sample this vector at $n$ points, gaining a vector $\vec{T} = (t_1,t_2,t_3,\hdots)$ of times at which the samples were made, and $\vec{X} = (X_{t_i})$. Strictly speaking these are both random variables in and of themselves, up until the moment that we `realise' them. We can index into these vectors using the the integer $0 \leq i < n$, and we assume without loss of generality that the samples are sorted in time, such that $t_i < t_{i+1} \forall i$.
+
+		We wish to find a predictor, $\hat{X}_t$, which will predict the values of $X_t$ on a set of `prediction points', $t \in T$, subject to three further conditions:
+		\begin{itemize}
+			\item We are willing to present an \textit{a priori} guess at the functional form of the predictor, in the form of a `prior function' $g(t)$.
+			\item The only thing we `know' (or are willing to \textit{ansatz}) about $X_t$ is the second moment kernel (a generalisation of the covariance):
+			$$ \E{(X_t-g(t)) (X_s-g(s))} = k(t,s)$$
+			\item Our predictor should be linear, such that:
+			$$\hat{X}_t = g(t) + \vec{a}_t \cdot \left(\vec{X} - \vec{G}\right)$$
+			Where $G_i = g(t_i)$
+		\end{itemize}
+		We again reiterate that $X_t, \vec{X}$ and $\hat{X}_t$ are - strictly speaking - random variables until we make them into real numbers at the moment we wish to actually make a prediction. $\vec{a}_t$ is a real $n$-tuple, which takes on different values at each value of $t$.
+
+		These are the ingredients of the standard BLP. The goal of this work is to extend this by adding the knowledge that the underlying process -- and hence the predictions -- should obey a number of constraints.
+	\section{Deriving the C-BLP}
+
+		We define the C-BLP as the linear predictor which minimises the Mean Squared Error, averaged across all realisations of the random variable, computed at the set $T$ of points at which we wish to make predictions, and which obeys our constraints.
+
+		Therefore, the C-BLP minimises the following Lagrangian:
+		\begin{spalign}
+			\mathcal{L} & = \sum_{t \in T} \langle (X_t - \hat{X}_t)^2 \rangle - \sum_j \lambda_j h_j(\{\hat{X}\}) \label{E:GlobalLagrangian}
+		\end{spalign}
+		Here $h_j(\{\hat{X}_t\})$ is the $j^\text{th}$ constraint on the \textit{prediction points}\footnote{For clarity and avoidance of symbol-collision with the other X-s, we will denote the prediction points as $P_i = \hat{X}_{t_i} = g(t_i) + \a \cdot \vec{X}^\prime$}, such that $h_j = 0$ when the constraint is met, and is non-zero otherwise, with the sum running over all such constraints. $\lambda_j \in \mathbb{R}$ are the associated Lagrange Multipliers. In the standard BLP we are able to treat the Lagrangian as separable in each element of $T$ - minimising the MSE individually at each $t\in T$ is equivalent to performing a global minimisation: in the C-BLP this is not true, and we must consider the global case.
+
+		The issue at present is that we do not know what the behaviour of $X_t$ is -- we might have an initial guess (i.e. our prior, $g(t)$), but the entire purpose of this exercise is that we do not know $X_t$. However, by expanding out the brackets, we are able to write the Lagrangian in the following form:
+		\begin{spalign}
+			\mathcal{L} & = \left[\sum_{t \in T} \E{{X_t^\prime}^2} - 2\a  \cdot \E{X_t^\prime \vec{X}^\prime} + \E{(\a \cdot \vec{X}^\prime)^2} \right] - \sum_j \lambda_j h_j(\{\hat{X}\})
+			\\
+			& = \left[\sum_{t \in T} \E{{X_t^\prime}^2} - 2\a  \cdot \vec{k}_t + \a \cdot (K \a) \right] - \sum_j \lambda_j h_j(\{\hat{X}\})
+		\end{spalign}
+		Where:
+		\begin{spalign}
+			X_t^\prime & = X_t - g(t)
+			\\
+			\vec{X}^\prime & = \vec{X} - \vec{G}
+			\\
+			\vec{k}_t & \in \mathbb{R}^n \text{ such that } \left[ \vec{k}_t \right]_i = k(t,t_i)
+			\\
+			K & \in \mathbb{R}^{n\times n} \text{ such that } K_{ij} = k(t_i,t_j)
+		\end{spalign}
+		Note that since the kernel is, by definition, symmetric in its arguments, $K^T = K$. Note that we have also taken the explicit step of writing our kernel as a relationship between the \textit{transformed} data - i.e. $X^\prime$ - the imposition of different functions $g(t)$ might therefore warrant different kernels. This is true even if the transform is the (commonly used) constant `mean scaling', $g(t) = \E{X_t} \approx \frac{1}{n} \vec{X} \cdot \mathds{1}$.
+
+		By performing this transform we have placed the incomputable terms - that of $\E{(X_t^\prime)^2}$ into a constant term. Since Lagrangians are invariant under constant scalings, it is possible to find an optimal value of $\a$ using only the remaining computable terms. 
+
+		However - as we shall see - we are in the uncomfortable position of trying to impose conditions on the predicted values, $P_i = \hat{X}_{t_i} = g(t_i) + \ai \cdot \vec{X}^\prime$ whilst our object of interest is now the vector $\ai$. 
+
+		We therefore limit ourselves to the case of \textit{linear constraints}, i.e., those which can be written in the following form:
+		\begin{spalign}
+			h_j(\{P\}) & = c_j - \sum_k d_{jk} P_k
+			\\
+			& = c_j - \sum_k d_{jk} \left( g(t_k) + \vec{a}_{t_k} \cdot \vec{X}^\prime\right) \label{E:Constraint}
+		\end{spalign}
+		We can then take the derivative of the Lagrangian with respect to $\ai$, and find that:
+		\begin{spalign}
+			\pdiv{\mathcal{L}}{\ai} & = 2 K \ai - 2 \vec{k}_i - \sum_j \lambda_j \pdiv{h_j}{\ai}
+			\\
+			& = 2 K \ai - 2 \vec{k}_i + \left(\sum_j \lambda_j b_{ji}\right) \vec{X}^\prime
+			\\
+			& = 2 K \ai - 2 \vec{k}_i + \eta_{i} \vec{X}^\prime
+		\end{spalign}
+		Hence, the optimal value of $\ai$ is:
+		\begin{spalign}
+			\ai & = K^{-1} \left( \vec{k}_i - \frac{\eta_i}{2} \vec{X}^\prime \right)
+			\\
+			& = \vi - \frac{\eta_i}{2} \wi
+		\end{spalign}
+		The optimal predicted value is:
+		\begin{spalign}
+			P_i & = g(t_i) + \ai \cdot \vec{X}^\prime
+			\\
+			& = g(t_i) + \vi \cdot \vec{X}^\prime - \frac{\eta_i}{2} \wi \cdot \vec{X}^\prime
+			\\
+			& = g(t_i) + A_i - \frac{\eta_i}{2} B \label{E:LagrangeOptim}
+		\end{spalign}
+
+		\subsection{Exact Constraints}
+
+			In the case where the constraints $h_j$ are exact -- i.e. the sets $\{c\}$ and $\{d\}$ are exactly determined, we may therefore analytically solve to find the set of Lagrange multipliers, then $\vec{\eta}$, and hence compute the predictor. We note that $\vec{\eta}$ can be written as:
+			\begin{equation}
+				\vec{\eta} = D^T \vec{\lambda}
+			\end{equation}
+			Where $D_{ij} = d_{ij}$ is the constraint matrix, $\vec{\eta}_k = \eta_k$ is a vector on $\mathbb{R}^N$ and $\vec{\lambda}_k = \lambda_k$ is a vector on $\mathbb{R}^m$, where $m$ is the number of constraints. The requirement that the constraints are met can be written as:
+			\begin{spalign}
+				D \vec{p} = \vec{c}
+			\end{spalign} 
+			Where $\vec{p}_i = P_i$ is another vector on $\mathbb{R}^n$ and $\vec{c}_i = c_i \in \mathbb{R}^m$. Writing $g(t_i) + A_i = q_i$, this is then:
+			\begin{spalign}
+				D\left(\vec{q} - \frac{B}{2} D^T \vec{\lambda} \right) = \vec{c} \LLR \vec{\lambda} = \frac{2}{B} \left(D D^T \right)^{-1} \left( D \vec{q} - \vec{c} \right)
+			\end{spalign}
+			Therefore:
+			\begin{spalign}
+				\vec{p} =  \left( \mathds{1}_N - D^T (D D^T)^{-1} D\right)\vec{q} + D^T (DD^T)^{-1} \vec{c}
+			\end{spalign}
+			In the case where there is only a single constraint ($m=1$), this simplifies such that $D \to \vec{d}^T$:
+			\begin{spalign}
+				\vec{p} = \vec{q} + \frac{c - \vec{q}\cdot \vec{d}}{\vec{d}^2} \vec{d} 
+			\end{spalign}
+			% \subsubsection*{An Example}
+			% 	Consider the case of two constraints: the fucntion must integrate to some value ($\mathcal{I}$), and the prediction is fixed at some known value for a given $\ell$, such that $P_\ell = \mathcal{P}$.
+
+			% 	This gives:
+			% 	\begin{spalign}
+			% 		D_{ij} & = \begin{cases} 1 & i = 0 \text{ or } j 0 \ell
+			% 			\\
+			% 			0 & \text{else}
+			% 		\end{cases}
+			% 		\LLR D \in \mathbb{R}^{2\times N}
+			% 		\\
+			% 		\vec{c} & = \begin{pmatrix} \mathcal{I} \\ \mathcal{P} \end{pmatrix}
+			% 	\end{spalign}
+			% 	Therefore:
+			% 	\begin{spalign}
+			% 		D^T D = \begin{pmatrix}
+			% 			N & 1
+			% 			\\
+			% 			1 & 1
+			% 		\end{pmatrix} \LLR (D^T D)^{-1} = \frac{1}{N-1} \begin{pmatrix} 1 & -1 \\ -1 & N \end{pmatrix}
+			% 	\end{spalign}
+		\subsection{Inexact Constraints}
+
+			In the case where the constraints are not exact, but serve to enforce bounds -- i.e. monotonicity or positivity -- there is a problem since the parameters of the constraint are not fixed. We may not care, for example, how much greater $X_{i+1}$ is than $X_i$ is, only that it \textit{is} greater. 
+
+			We could enforce this through slack variables and utilise the KKT conditions, however for our purposes it is better to \textit{parameterise} the constraint. 
+
+			Various parameterisations are possible, but perhaps the most comprehensible is to consider that the \textit{prediction} points, $P_i$ are a function of some other parameters $\vec{\theta} \in R^m$, such that:
+			\begin{spalign}
+				P_i & = \T(\vec{\theta})
+				\\
+				h_j(\T(\vec{\theta})) &= 0 ~\forall~i,j, \vec{\theta}
+			\end{spalign}
+			For example, in the case of enforcing positivity, we might have that $P_i = e^{z_i}$, which is equivalent to asserting that $d_{ij} = \delta_{ij}$ and $c_i = e^{z_i}$. Rearranging \eref{E:LagrangeOptim}, we are able to write $\eta_i$ as a function of this Transform, and hence write $\ai$ in the following form:
+			\begin{spalign}
+				\ai = \vi + \frac{P_i(\vec{\theta}) - A_i - g(t_i)}{B} \wi \label{E:Reparam}
+			\end{spalign}
+			This might seem somewhat tautological - we have written $\ai$ in terms of the prediction values - but the entire purpose of $\ai$ is to make predictions!
+
+			The usefulness of this comes evident when we insert \eref{E:Reparam} back into the Lagrangian -- essentially performing a change of coordinates from $\mathcal{L}(\vec{a},\vec{\theta})$ to $\mathcal{L}(\vec{\theta})$, since we have now ensured that $\a$ will always be at its optimal value for each value of $\vec{\theta}$. 
+			\begin{align}
+				\vec{k}_i \cdot \ai & = \vi \cdot \vec{k}_i + \frac{P_i(\vec{\theta}) - A_i - g(t_i)}{B} \wi \cdot \vec{k}_i
+				\\
+				\begin{split}
+					~
+					\\
+				\ai \cdot (K\ai) & = \left(\vi + \frac{P_i(\vec{\theta}) - A_i - g(t_i)}{B} \wi  \right) \cdot\left(\vec{k}_i + \frac{P_i(\vec{\theta}) - A_i - g(t_i)}{B} \vec{X}^\prime  \right) 
+				\\
+				& =  \vi \cdot \vec{k}_i + \left(\frac{P_i(\vec{\theta}) - A_i - g(t_i)}{B}\right)\left(\wi \cdot \vec{k}_i + A_i\right) + \frac{\left(P_i(\vec{\theta}) - A_i - g(t_i)\right)^2}{B}
+				\end{split}
+			\end{align}
+			Since $\vec{w} \cdot \vec{k}_i = (K^{-1} \vec{X}^\prime) \vec{k}_i = (K^{-1} \vec{k}_i) \vec{X}_\prime = \vi \cdot \vec{X}^\prime = A_i$ due to the symmetry of $K$, and the constraints are all automatically satisfied thanks to our parameterisation, we find that the Lagrangian simplifies to:
+			\begin{spalign}
+				\mathcal{L}(\vec{\theta}) & =  \sum_i \left( \E{(X_i^\prime)^2} -   \vec{k}_i \cdot \vi \right) + \frac{1}{B} \left(P_i(\theta) - A_i - g(t_i)\right)^2
+				\\
+				& =  \text{const in $\vec{\theta}$} + \frac{1}{B}\sum_i\left(P_i(\theta) - A_i - g(t_i)\right)^2
+				\\
+				\mathcal{L}^\prime & = \sum_i P_i\left(P_i(\theta) - 2 (A_i + g(t_i))\right)
+			\end{spalign}
+			Where in the final line we took the opportunity to perform a rescaling (recalling that $B > 0$ is enforced by the positive definiteness of $K$) which leaves the optimum invariant. In some cases it is trivial to identify the optimal values of $P_i$ - for example, in the case where $P_i = e^{\theta_i}$, the maximum is evidently:
+			\begin{equation}
+				P_i = \begin{cases} A_i + g(t_i) & \text{if this is } > 0
+					\\
+					0 & \text{else}
+				\end{cases}
+			\end{equation}
+			In short, the C-BLP is equal to the BLP except when the condition is violated, at which point a hard cut is placed on it. 
+
+			More complex conditions however, can lead to more complex behaviour - the monotonicity constraint, for example, exhibits the obvious behaviour that it again follows the BLP when it is monotonic, and is flat when the BLP has a negative gradient -- but the \textit{location} where the C-BLP becomes flat is non-trivial, with flatness necessarily occuring \textit{before} the BLP changes direction: a tradeoff in following the BLP locally versus becoming too large too early without the ability to decrease due to the monotonic constraint.
+
+			In these cases a more complex search is required -- where the behaviour of the constraint is evident \textit{a priori} (such as the monotonic constraint), one can limit the space of the search. In the general case, however, a numerical optimisation is required. 
+
+			The derivative of the Lagrangian with respect to the constraint parameters is:
+			\begin{spalign}
+				\pdiv{\mathcal{L}^\prime}{\theta_m} = 2\sum_i \left(P_i - A_i - g(t_i)\right) \pdiv{P_i}{\theta_m}
+			\end{spalign}
+			This can be used to numerically optimise the values of $\vec{\theta}$
+		\subsection{Mixed Constraints}
+
+			We now consider the case where some of our constraints are exact equality constraints, whilst others are inequality constraints. We denote the equality constraints as $e(\{P\})$, and the inequality constraints as $m(\{P\})$. 
+
+			The derivation proceeds exactly as before, but \eref{E:LagrangeOptim} has two terms:
+			\begin{spalign}
+				P_i &= g(t_i) + A_i - \frac{B}{2} \left( \epsilon_i + \mu_i \right)
+				\\
+				~
+				\\
+				\epsilon_i& = \sum_{j \in \text{equality}} \lambda_j b_{ji}
+				\\
+				\mu_i & = \sum_{j \in \text{inequality}} \lambda_j b_{ji}
+			\end{spalign}
+			The value of $\vec{\epsilon}$ can be determined in exactly the same way as $\vec{\eta}$ in the pure-equality case:
+			\begin{equation}
+				\vec{\epsilon} = (D_e^T D_e)^{-1} D_e^T \vec{r}_e
+			\end{equation}
+			Where $D_e$ is the constraint matrix derived from the equality subset $\{e_j\}$, and so on.
+
+\end{document}

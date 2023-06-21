@@ -11,9 +11,9 @@ import warnings
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
-kernelSigma = 1
+kernelSigma = 0.5
 
-dataNoise = 0.05
+dataNoise = 0.0002
 learningRate = 0.1
 learningMemory = 0.8
 learningMemory_SecondMoment = 0.99
@@ -65,6 +65,7 @@ def BLP(predictT,dataT,dataX):
 	# ps += meanFunc(predictX)
 	rms = np.sqrt(rms/len(ps))
 	return [ps,rms]
+
 
 
 def BLCP(predictX,dataT,dataX,steps,zs	):
@@ -135,7 +136,16 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 			if zs[j] > l:
 				zs[j] = l
 
+	
+
 	ps = Transform(zs) + mu
+	for iT in range(0,len(predictX)):
+		k = ks[iT]
+		v = np.matmul(Kinv,k)
+		ait = v + (ps[iT] - As[iT] - gPredict[iT])/(kdotw[iT])
+		
+		print("At i=",iT,"MSE=",np.dot(ait,np.matmul(K,ait)) -2 *np.dot(ait,tData))
+	
 	rms = 0
 	for i in range(len(ps)):
 		rms += (trueY[i] - ps[i])**2
@@ -144,7 +154,7 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	return [ps,np.sqrt(rms)]
 
 
-mode = 2
+mode = 0
 
 if mode == 0:
 	def Transform(z):
@@ -153,6 +163,7 @@ if mode == 0:
 		out[0] = z[0]
 		for i in range(1,len(z)):
 			out[i]=out[i-1] + np.exp(z[i])
+		# print("hi")
 		return out
 
 	def TransformDerivative(z,i):
@@ -217,7 +228,7 @@ if mode == 2:
 		sig = 1.5
 		return 1.0/(np.sqrt(2*np.pi)*sig) * np.exp(- (t)**2/(2*sig**2))
 xMin = -6
-xMax = 6
+xMax = 5
 m = (Func(xMax) - Func(xMin))/(xMax - xMin)
 c = Func(xMin) -xMin *m
 def Prior(t):
@@ -231,11 +242,12 @@ def GenerateData(nData):
 
 	return [t,x]
 # np.random.seed(0)
-[t,x] = GenerateData(51)
+[t,x] = GenerateData(111)
+c = np.mean(x)
 tt = np.linspace(min(t),max(t),1000)
 pt.plot(tt,Func(tt),"k:",label="Underlying function")
 pt.plot(tt,Prior(tt),"r:",label="Prior")
-tt = np.linspace(min(t),max(t),150)
+tt = np.linspace(min(t),max(t),100)
 deltaT = tt[1] - tt[0]
 pt.scatter(t,x,label="Data")
 
@@ -253,11 +265,11 @@ print(np.sum(ps) * deltaT)
 # 	else:
 # 		zinit[i] = -10
 
-zinit = np.zeros(np.shape(ps))+0.14
+zinit = np.zeros(np.shape(ps))-10
 zinit[0] = -2#np.log(np.maximum(ps[0],0.01))
 
-alpha= 2*deltaT
-[ps,rms] = BLCP(tt,t,x,2000,zinit.copy())
+alpha= 0.2*deltaT
+[ps,rms] = BLCP(tt,t,x,200,zinit.copy())
 print(np.sum(ps) * deltaT)
 pt.plot(tt,ps,label="BLCP-0.1, $\epsilon=$" + strRound(rms))
 
