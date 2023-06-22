@@ -113,7 +113,7 @@
 			\end{spalign}
 			Therefore:
 			\begin{spalign}
-				\vec{p} =  \left( \mathds{1}_N - D^T (D D^T)^{-1} D\right)\vec{q} + D^T (DD^T)^{-1} \vec{c}
+				\vec{p} =  \left( \mathds{1}_N - D^T (D D^T)^{-1} D\right)\vec{q} + D^T (DD^T)^{-1} \vec{c} \label{E:ConstrainedSolution}
 			\end{spalign}
 			In the case where there is only a single constraint ($m=1$), this simplifies such that $D \to \vec{d}^T$:
 			\begin{spalign}
@@ -196,24 +196,75 @@
 				\pdiv{\mathcal{L}^\prime}{\theta_m} = 2\sum_i \left(P_i - A_i - g(t_i)\right) \pdiv{P_i}{\theta_m}
 			\end{spalign}
 			This can be used to numerically optimise the values of $\vec{\theta}$
-		\subsection{Mixed Constraints}
 
-			We now consider the case where some of our constraints are exact equality constraints, whilst others are inequality constraints. We denote the equality constraints as $e(\{P\})$, and the inequality constraints as $m(\{P\})$. 
+		\subsection{Inexact Constraints (Redux)}
+			
+			We note that we performed a fairly drastic change in approach between the exact constraints and the inexact constraints -- is it possible to maintain the same approach for both?
 
-			The derivation proceeds exactly as before, but \eref{E:LagrangeOptim} has two terms:
+			We consider now that the parameters $\vec{c}$ of the constraints are functions of an (unconstrained) external parameter, $\vec{z} \in \mathbb{R}^m$ - letting $\vec{c} = \text{const}$ recovers the condition of the exact equalities. However, in any  other case we must still find the values of $\vec{z}$ which optimise the global Lagrangian - and hence we need to rewrite our Lagrangrian in terms of $\vec{c}$.
+
+			From \eref{E:ConstrainedSolution}, we can rewrite the predicted value-vector (recalling that $\vec{p}_i = P_i = \hat{X}_{t_i}$) as:
 			\begin{spalign}
-				P_i &= g(t_i) + A_i - \frac{B}{2} \left( \epsilon_i + \mu_i \right)
+				\vec{p} & = \vec{j} + R \vec{c}(\vec{z})
 				\\
-				~
+				R &= D^T (D D^T)^{-1}
 				\\
-				\epsilon_i& = \sum_{j \in \text{equality}} \lambda_j b_{ji}
-				\\
-				\mu_i & = \sum_{j \in \text{inequality}} \lambda_j b_{ji}
+				\vec{j} = \left( \mathds{1}_N - R D\right) \vec{q} &\LLR j_i  = g(t_i) + A_i + \sum_{j,k} R_{ij}D_{jk} (g(t_k) + A_k)%\left( \mathds{1}_N - D^T (D D^T)^{-1} D\right) \left(	
 			\end{spalign}
-			The value of $\vec{\epsilon}$ can be determined in exactly the same way as $\vec{\eta}$ in the pure-equality case:
-			\begin{equation}
-				\vec{\epsilon} = (D_e^T D_e)^{-1} D_e^T \vec{r}_e
-			\end{equation}
-			Where $D_e$ is the constraint matrix derived from the equality subset $\{e_j\}$, and so on.
+			We note that from a conceptual standpoint it is not a problem for the `mixing' constraints $D_{ij}$ to be the functions of $\vec{z}$, but this assumption allows us to precompute many of the otherwise troublesome entities. We can also rewrite $\ai$ as:
+			\begin{spalign}
+				\ai & = \vi - \frac{\eta_i}{2} \wi
+				\\
+				& = \vi +  \frac{\left[R\left(\vec{c} - D \vec{q}  \right) \right] \cdot \hat{e}_i}{B} \wi
+				\\
+				& = \vec{j}_i + \frac{(R\vec{c})\cdot \hat{e}_i}{B} \wi
+			\end{spalign}
+			Where
+			\begin{spalign}
+				R&= D^T (D D^T)^{-1}
+				\\
+				\vec{j}_i & = \vi - \frac{(RD\vec{q})\cdot\hat{e}_i}{B}\wi
+			\end{spalign}
+			We therefore have:
+			\begin{spalign}
+				\vec{k}_i \cdot \ai & = \vi \cdot \vec{k}_i + \frac{A_i}{B} \left((R\vec{c}) \cdot\hat{e}_i - (RD\vec{q})\cdot \hat{e}_i\right)
+				\\
+				&= \text{const in $\vec{c}$} + \frac{A_i}{B} (R \vec{c})\cdot \hat{e}_i
+				\\
+				\ai \cdot \left(K\ai\right) & = \left(\vec{j}_i + \frac{(R\vec{c})\cdot \hat{e}_i}{B} \wi \right) \cdot  \left(K\vec{j}_i + \frac{(R\vec{c})\cdot \hat{e}_i}{B} \vec{X} \right)
+				\\
+				& = \text{const in $\vec{c}$} + 2\frac{(R\vec{c})\cdot \hat{e}_i}{B} \vec{j}_i \cdot \vec{X} + \frac{1}{B}((R \vec{c}) \cdot \hat{e}_i)^2
+				\\
+				& = \text{const in $\vec{c}$} + 2\frac{(R\vec{c})\cdot \hat{e}_i}{B}\left(A_i - (RD\vec{q})\cdot\hat{e}_i\right)  + \frac{1}{B}((R \vec{c}) \cdot \hat{e}_i)^2
+			\end{spalign}
+			Therefore:
+			\begin{spalign}
+				\mathcal{L}^\prime & = \sum_i \ai \cdot K\ai - 2 \vec{k}_i \cdot \ai 
+				\\
+				& = \text{const in $\vec{c}$} + \sum_i ((R \vec{c}) \cdot \hat{e}_i)^2 - 2(R\vec{c})\cdot \hat{e}_i(RD\vec{q})\cdot\hat{e}_i
+				\\
+				& = \text{const in $\vec{c}$} + (R \vec{c})^2 - 2 (R \vec{c})\cdot(RD\vec{q})
+				\\
+				& = \text{const in $\vec{c}$} + \left( R \vec{c}(\vec{z}) - RD \vec{q} \right)^2
+			\end{spalign}
+		% \subsection{Mixed Constraints}
+
+		% 	We now consider the case where some of our constraints are exact equality constraints, whilst others are inequality constraints. We denote the equality constraints as $e(\{P\})$, and the inequality constraints as $m(\{P\})$. 
+
+		% 	The derivation proceeds exactly as before, but \eref{E:LagrangeOptim} has two terms:
+		% 	\begin{spalign}
+		% 		P_i &= g(t_i) + A_i - \frac{B}{2} \left( \epsilon_i + \mu_i \right)
+		% 		\\
+		% 		~
+		% 		\\
+		% 		\epsilon_i& = \sum_{j \in \text{equality}} \lambda_j b_{ji}
+		% 		\\
+		% 		\mu_i & = \sum_{j \in \text{inequality}} \lambda_j b_{ji}
+		% 	\end{spalign}
+		% 	The value of $\vec{\epsilon}$ can be determined in exactly the same way as $\vec{\eta}$ in the pure-equality case:
+		% 	\begin{equation}
+		% 		\vec{\epsilon} = (D_e^T D_e)^{-1} D_e^T \vec{r}_e
+		% 	\end{equation}
+		% 	Where $D_e$ is the constraint matrix derived from the equality subset $\{e_j\}$, and so on.
 
 \end{document}
