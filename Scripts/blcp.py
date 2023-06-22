@@ -8,12 +8,13 @@ from matplotlib import pyplot as pt
 from tqdm import tqdm
 # np.random.seed(0) #enable for reproducable randomness
 import warnings
+import time
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
-kernelSigma = 0.5
+kernelSigma = 3.5
 
-dataNoise = 0.0002
+dataNoise = 0.00001
 learningRate = 0.1
 learningMemory = 0.8
 learningMemory_SecondMoment = 0.99
@@ -68,6 +69,86 @@ def BLP(predictT,dataT,dataX):
 
 
 
+def C_BLP(predictX,dataT,dataX,steps):
+	gPredict = Prior(predictX)
+	trueY = Func(predictX)
+	tData = dataX - Prior(dataT)
+	K=kernelMatrix(dataT) + (dataNoise/2)**2 * np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+
+	q = np.zeros((len(predictX),1))
+	for i in range(len(predictX)):
+		t = predictX[i]
+		
+		k=kernelVector(dataT,t)
+		v = np.matmul(Kinv,k)
+		q[i] = np.dot(v,tData) + gPredict[i]
+
+	mDim = len(predictX) -1
+	zs = np.zeros((mDim,1))-7
+	cs = np.exp(zs)
+	D = np.zeros((mDim,mDim+1))
+	for i in range(mDim):
+		D[i,i] = -1
+		D[i,i+1] = 1
+	
+	R = np.matmul(D.transpose(), np.linalg.inv(np.matmul(D, D.transpose())))
+	Rt = R.transpose()
+	Rdq = np.matmul(np.matmul(R,D),q)
+	J = np.matmul(np.identity(len(predictX)) - np.matmul(R,D),q)
+
+	ms = np.zeros((len(zs),1))
+	vs = np.zeros((len(zs),1))
+	grad = np.zeros((len(zs),1))
+	for s in range(steps):
+		
+		cs = np.exp(zs)
+
+		Rc = np.matmul(R,cs)
+		# predict = J + Rc
+		diff = Rc - Rdq
+		# for i in range(len(grad)):
+		# 	# col = R[:,i] * cs[i]
+		# 	g = 0
+		# 	for j in range(len(grad)):
+		# 		g+= diff[j] * R[j,i] * cs[i] #col[j]
+		# 	grad[i] = g
+		# # Rtdiff = np.matmul(Rt,diff)
+		# print(np.shape(diff),np.shape(cs))
+		# grad2 = np.matmul(cs.transpose(),np.matmul(Rt,diff))
+		grad = np.multiply(cs,np.matmul(Rt,diff))
+		# print(grad.transpose()[1:5],grad2.transpose()[1;5÷])
+		# print(zs.transpose(),"\n",cs.transpose(),"\n",predict.transpose(),"\n",diff.transpose(),"\n",grad.transpose(),"\n\n")
+		# print("grad=",grad)
+		#ADAM step routine
+		ms = learningMemory * ms + (1.0 - learningMemory)*grad
+		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
+		c1 = 1.0 - learningMemory**(s+1)
+		c2 = 1.0 - learningMemory_SecondMoment**(s+1)
+		eps = 1e-8
+		# r = 
+		# print(r)
+		# print(np.shape(zs),np.shape(ms),np.shape(vs),np.shape(r))
+		zs -= learningRate * np.divide(ms/c1,np.sqrt(eps + vs/c2))
+		# zs -= learningRate * grad
+		#prevents the prediction from 'dying' by going too negative
+		for j in range(1,len(zs)):
+			m = -20
+			if zs[j] < m:
+				zs[j] = m
+			l = 20
+			if zs[j] > l:
+				zs[j] = l
+
+
+	bestPredict = J + np.matmul(R,cs)
+	rms = 0
+	for i in range(len(ps)):
+		rms += (trueY[i] - bestPredict[i])**2
+	rms/=len(trueY)
+	# print(cs.transpose())
+	# print(bestPredict.transpose())
+	return [bestPredict,np.sqrt(rms)]
 def BLCP(predictX,dataT,dataX,steps,zs	):
 	# zs = np.zeros(len(predictX))
 	# zs[1:]= -2
@@ -139,12 +220,12 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	
 
 	ps = Transform(zs) + mu
-	for iT in range(0,len(predictX)):
-		k = ks[iT]
-		v = np.matmul(Kinv,k)
-		ait = v + (ps[iT] - As[iT] - gPredict[iT])/(kdotw[iT])
+	# for iT in range(0,len(predictX)):
+	# 	k = ks[iT]
+	# 	v = np.matmul(Kinv,k)
+	# 	ait = v + (ps[iT] - As[iT] - gPredict[iT])/(kdotw[iT])
 		
-		print("At i=",iT,"MSE=",np.dot(ait,np.matmul(K,ait)) -2 *np.dot(ait,tData))
+	# 	print("At i=",iT,"MSE=",np.dot(ait,np.matmul(K,ait)) -2 *np.dot(ait,tData))
 	
 	rms = 0
 	for i in range(len(ps)):
@@ -241,20 +322,23 @@ def GenerateData(nData):
 	x = Func(t) * (1 + np.random.normal(0,dataNoise,nData,))+np.random.normal(0,0.01,nData,)
 
 	return [t,x]
-# np.random.seed(0)
-[t,x] = GenerateData(111)
+np.random.seed(0)
+[t,x] = GenerateData(25)
 c = np.mean(x)
 tt = np.linspace(min(t),max(t),1000)
 pt.plot(tt,Func(tt),"k:",label="Underlying function")
 pt.plot(tt,Prior(tt),"r:",label="Prior")
-tt = np.linspace(min(t),max(t),100)
+tt = np.linspace(min(t),max(t),300)
 deltaT = tt[1] - tt[0]
 pt.scatter(t,x,label="Data")
 
 
 [ps,rms] = BLP(tt,t,x)
 pt.plot(tt,ps,label="BLP, $\epsilon=$" + strRound(rms))
-print(np.sum(ps) * deltaT)
+
+
+
+# print(np.sum(ps) * deltaT)
 
 # zinit = ps.copy()
 # prev = zinit[0]
@@ -265,15 +349,31 @@ print(np.sum(ps) * deltaT)
 # 	else:
 # 		zinit[i] = -10
 
-zinit = np.zeros(np.shape(ps))-10
+zinit = np.zeros(np.shape(ps))-5
 zinit[0] = -2#np.log(np.maximum(ps[0],0.01))
 
+Res = 400
+pt.title(str(Res) + " optim loops")
 alpha= 0.2*deltaT
-[ps,rms] = BLCP(tt,t,x,200,zinit.copy())
-print(np.sum(ps) * deltaT)
-pt.plot(tt,ps,label="BLCP-0.1, $\epsilon=$" + strRound(rms))
+start = time.time()
+[ps,rms] = BLCP(tt,t,x,Res,zinit.copy())
+end = time.time()
+pt.plot(tt,ps,label="Old, $\\tau=$" + strRound(end-start) + "s")
+print("Old: ",end-start)
+start = time.time()
+[ps,rms] = C_BLP(tt,t,x,Res)
+end = time.time()
+print("New: ",end-start)
+pt.plot(tt,ps,label="New, $\\tau=$" + strRound(end-start)+"s")
 
 
+start = time.time()
+[ps,rms] = C_BLP(tt,t,x,10000)
+end = time.time()
+print("Hires: ",end-start)
+pt.plot(tt,ps,label="New @ 10,000res, $\\tau=$" + strRound(end-start) + "s")
+# [ps,rms] = C_BLP(tt,t,x,1200)
+# pt.plot(tt,ps,label="C-BLP-hi, $\epsilon=$" + strRound(rms))
 # [ps,rms] = BLCP(tt,t,x,3000,zinit.copy())
 # print(np.sum(ps) * deltaT)
 # pt.plot(tt,ps,label="BLCP-0.1-hi, $\epsilon=$" + strRound(rms))

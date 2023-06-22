@@ -249,8 +249,11 @@
 			\end{spalign}
 			The derivative with respect to the (unconstrained) vectors $\vec{z}$ is:
 			\begin{spalign}
-				\pdiv{\mathcal{L}^\prime}{z_m} = \left( R \vec{c}(\vec{z}) - RD \vec{q} \right) \cdot R \pdiv{\vec{c}}{z_m}
+				\pdiv{\mathcal{L}^\prime}{z_m} & = \left( R \vec{c}(\vec{z}) - RD \vec{q} \right) \cdot R \pdiv{\vec{c}}{z_m}
+				\\
+				& = \left( \vec{p}(\vec{z}) - \vec{q} \right) \cdot R \pdiv{\vec{c}}{z_m}
 			\end{spalign}
+			Since $\vec{q}$ is the BLP prediction we can once again see that the derivative is zero if the BLP obeys the constraints ($\vec{c} - D \vec{q} = 0$), so the C-BLP will always revert to the BLP if this meets our constraints. 
 		% \subsection{Mixed Constraints}
 
 		% 	We now consider the case where some of our constraints are exact equality constraints, whilst others are inequality constraints. We denote the equality constraints as $e(\{P\})$, and the inequality constraints as $m(\{P\})$. 
