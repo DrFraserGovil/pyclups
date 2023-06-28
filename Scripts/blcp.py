@@ -9,15 +9,16 @@ from tqdm import tqdm
 # np.random.seed(0) #enable for reproducable randomness
 import warnings
 import time
+from scipy import special
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
 dataNoise = 0.1
-learningRate = 0.3
-learningMemory = 0.7
-learningMemory_SecondMoment = 0.99
+learningRate = 0.5
+learningMemory = 0.9
+learningMemory_SecondMoment = 0.999
 
 def kernel(x,y):
 	#covariance the kernel
@@ -35,18 +36,21 @@ def kernelMatrix(sampleX):
 
 
 def phi(i,t):
-	if i == 0:
-		return t-t+1
-	if i == 1:
-		return 2*t
-	if i == 2:
-		return 4*t**2 - 2
-	if i == 3:
-		return 8*t**3 - 12*t
-	if i == 4:
-		return 16*t**4 -48*t**2 + 12
-	if i == 5:
-		return 32*t**5 - 160*t**3 + 120*t 
+	p_monic = special.hermite(i, monic=True)
+	return p_monic(t)
+	return t**i
+	# if i == 0:
+	# 	return t-t+1
+	# if i == 1:
+	# 	return 2*t
+	# if i == 2:
+	# 	return 4*t**2 - 2
+	# if i == 3:
+	# 	return 8*t**3 - 12*t
+	# if i == 4:
+	# 	return 16*t**4 -48*t**2 + 12
+	# if i == 5:
+	# 	return 32*t**5 - 160*t**3 + 120*t 
 
 def kernelVector(sampleX,t):
 	#my attempt at computing k_i, the covariance/ second moment vector evaluated over the data, at time t
@@ -310,7 +314,6 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
 	Minv = np.linalg.inv(M)
 	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
-	print(C)
 	Bmat = np.identity(n)-np.matmul(C,Phi)
 	alpha = np.zeros((len(predictX),1))
 	beta = np.zeros((len(predictX),1))
@@ -327,13 +330,13 @@ def CLUP(predictX,dataT,dataX,order,steps):
 		k=kernelVector(dataT,t)
 		ks.append(k)
 		vi = np.matmul(Kinv,k)
+		v.append(vi)
 		phiVec = np.zeros(order+1)
 		for j in range(order+1):
 			phiVec[j] = phi(j,t)
 		phis.append(phiVec)
 
 		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
-	
 		vecs.append(vec)
 		alpha[i] = np.dot(vec,dataX)
 		beta[i] = np.dot(np.matmul(Bmat,w),dataX)
@@ -346,7 +349,17 @@ def CLUP(predictX,dataT,dataX,order,steps):
 
 
 	mDim = len(predictX) -1
-	zs = np.random.uniform(1,1,(mDim,1))
+	zs = np.random.uniform(-5,-2,(mDim,1))
+	prev = np.dot(vecs[0],dataX)
+	for i in range(1,len(predictX)):
+		pred = np.dot(vecs[i],dataX)
+		naivediff = pred - prev
+		if naivediff > 0:
+			zs[i-1] = np.log(naivediff)
+			prev = pred
+		else:
+			zs[i-1] = -4
+
 	cs = np.exp(zs)
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
@@ -361,14 +374,15 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	ms = np.zeros((len(zs),1))
 	vs = np.zeros((len(zs),1))
 	grad = np.zeros((len(zs),1))
-
+	# print(learningRate)
 	for s in range(steps):
+		# print(cs[0])
 		cs = np.exp(zs)
 
 		diff = np.matmul(H,cs-Dalpha)+ell
 		
 		grad = np.multiply(cs,np.matmul(Ht,diff))
-		
+		# print(grad)
 		#ADAM step routine
 		ms = learningMemory * ms + (1.0 - learningMemory)*grad
 		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
@@ -421,7 +435,7 @@ if mode == 0:
 		out[i:] = val
 		return out
 	def Func(t):
-		return 300.0/(1 + np.exp(-t))+1000
+		return 1.0/(1 + np.exp(-t))
 if mode == 1:
 	deltaT = 1
 	def Transform(z):
@@ -553,10 +567,10 @@ def optim():
 def blupTest():
 	ndat = 11
 	global kernelSigma
-	kernelSigma = 3
+	kernelSigma = 1
 	[t,x] = GenerateData(ndat)
 	# c = np.mean(x)
-	tt = np.linspace(min(t),max(t),100)
+	tt = np.linspace(min(t),max(t),200)
 	res = 150
 	pt.plot(tt,Func(tt),"k:",label="True Function")	
 	pt.scatter(t,x,label="Data")
@@ -584,14 +598,16 @@ def blupTest():
 
 	# pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
 
-	for order in range(-1,0):
+	for order in range(0,1):
 		[blup,rms] = BLUP(tt,t,x,order)
 		pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
 
 
-	for order in range(-1,0):
-		[clup,rms] = CLUP(tt,t,x,order,2000)
+	for order in range(0,10):
+		[clup,rms] = CLUP(tt,t,x,order,1000)
 		pt.plot(tt,clup,label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
+		# [clup,rms] = CLUP(tt,t,x,order,100)
+		# pt.plot(tt,clup,label=str(order)+"-CLUP-low, $\epsilon=$" + strRound(rms))
 	pt.legend()
 	specialShow()
 
