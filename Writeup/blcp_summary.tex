@@ -4,7 +4,7 @@
 \usepackage{graphicx}
 \usepackage{dsfont}
 \usepackage[left=1in,right=1in]{geometry}
-\title{The C-BLP: Constrained Linear Predictors}
+\title{The CLP: Constrained Linear Predictors}
 \setlength\parskip{5pt}
 \setlength\parindent{0pt}
 \def\llangle{\left\langle}
@@ -24,7 +24,7 @@
 
 		We may randomly sample this vector at $n$ points, gaining a vector $\vec{T} = (t_1,t_2,t_3,\hdots)$ of times at which the samples were made, and $\vec{X} = (X_{t_i})$. Strictly speaking these are both random variables in and of themselves, up until the moment that we `realise' them. We can index into these vectors using the the integer $0 \leq i < n$, and we assume without loss of generality that the samples are sorted in time, such that $t_i < t_{i+1} \forall i$.
 
-		We wish to find a predictor, $\hat{X}_t$, which will predict the values of $X_t$ on a set of `prediction points', $t \in T$, subject to three further conditions:
+		In the case of the BLP, we wish to find a predictor, $\hat{X}_t$, which will predict the values of $X_t$ on a set of `prediction points', $t \in T$, subject to three further conditions:
 		\begin{itemize}
 			\item We are willing to present an \textit{a priori} guess at the functional form of the predictor, in the form of a `prior function' $g(t)$.
 			\item The only thing we `know' (or are willing to \textit{ansatz}) about $X_t$ is the second moment kernel (a generalisation of the covariance):
@@ -35,16 +35,20 @@
 		\end{itemize}
 		We again reiterate that $X_t, \vec{X}$ and $\hat{X}_t$ are - strictly speaking - random variables until we make them into real numbers at the moment we wish to actually make a prediction. $\vec{a}_t$ is a real $n$-tuple, which takes on different values at each value of $t$.
 
-		These are the ingredients of the standard BLP. The goal of this work is to extend this by adding the knowledge that the underlying process -- and hence the predictions -- should obey a number of constraints.
-	\section{Deriving the C-BLP}
+		These are the ingredients of the standard BLP. The goal of this work is to extend this by adding one further condition:
+		\begin{itemize}
+			\item The Predictor should obey a number of constraints of the form $h(\{X_t\}) = 0$
+		\end{itemize}
+		We are therefore attempting to formulate the \textit{Constrained Linear Predictor} (CLP)
+	\section{Deriving the CLP}
 
-		We define the C-BLP as the linear predictor which minimises the Mean Squared Error, averaged across all realisations of the random variable, computed at the set $T$ of points at which we wish to make predictions, and which obeys our constraints.
+		We define the CLP as the linear predictor which minimises the Mean Squared Error, averaged across all realisations of the random variable, computed at the set $T$ of points at which we wish to make predictions, and which obeys our constraints.
 
-		Therefore, the C-BLP minimises the following Lagrangian:
+		Therefore, the CLP minimises the following Lagrangian:
 		\begin{spalign}
 			\mathcal{L} & = \sum_{t \in T} \langle (X_t - \hat{X}_t)^2 \rangle - \sum_j \lambda_j h_j(\{\hat{X}\}) \label{E:GlobalLagrangian}
 		\end{spalign}
-		Here $h_j(\{\hat{X}_t\})$ is the $j^\text{th}$ constraint on the \textit{prediction points}\footnote{For clarity and avoidance of symbol-collision with the other X-s, we will denote the prediction points as $P_i = \hat{X}_{t_i} = g(t_i) + \a \cdot \vec{X}^\prime$}, such that $h_j = 0$ when the constraint is met, and is non-zero otherwise, with the sum running over all such constraints. $\lambda_j \in \mathbb{R}$ are the associated Lagrange Multipliers. In the standard BLP we are able to treat the Lagrangian as separable in each element of $T$ - minimising the MSE individually at each $t\in T$ is equivalent to performing a global minimisation: in the C-BLP this is not true, and we must consider the global case.
+		Here $h_j(\{\hat{X}_t\})$ is the $j^\text{th}$ constraint on the \textit{prediction points}\footnote{For clarity and avoidance of symbol-collision with the other X-s, we will denote the prediction points as $P_i = \hat{X}_{t_i} = g(t_i) + \a \cdot \vec{X}^\prime$}, such that $h_j = 0$ when the constraint is met, and is non-zero otherwise, with the sum running over all such constraints. $\lambda_j \in \mathbb{R}$ are the associated Lagrange Multipliers. In the standard BLP we are able to treat the Lagrangian as separable in each element of $T$ - minimising the MSE individually at each $t\in T$ is equivalent to performing a global minimisation: in the CLP this is not true, and we must consider the global case.
 
 		The issue at present is that we do not know what the behaviour of $X_t$ is -- we might have an initial guess (i.e. our prior, $g(t)$), but the entire purpose of this exercise is that we do not know $X_t$. However, by expanding out the brackets, we are able to write the Lagrangian in the following form:
 		\begin{spalign}
@@ -185,9 +189,9 @@
 					0 & \text{else}
 				\end{cases}
 			\end{equation}
-			In short, the C-BLP is equal to the BLP except when the condition is violated, at which point a hard cut is placed on it. 
+			In short, the CLP is equal to the BLP except when the condition is violated, at which point a hard cut is placed on it. 
 
-			More complex conditions however, can lead to more complex behaviour - the monotonicity constraint, for example, exhibits the obvious behaviour that it again follows the BLP when it is monotonic, and is flat when the BLP has a negative gradient -- but the \textit{location} where the C-BLP becomes flat is non-trivial, with flatness necessarily occuring \textit{before} the BLP changes direction: a tradeoff in following the BLP locally versus becoming too large too early without the ability to decrease due to the monotonic constraint.
+			More complex conditions however, can lead to more complex behaviour - the monotonicity constraint, for example, exhibits the obvious behaviour that it again follows the BLP when it is monotonic, and is flat when the BLP has a negative gradient -- but the \textit{location} where the CLP becomes flat is non-trivial, with flatness necessarily occuring \textit{before} the BLP changes direction: a tradeoff in following the BLP locally versus becoming too large too early without the ability to decrease due to the monotonic constraint.
 
 			In these cases a more complex search is required -- where the behaviour of the constraint is evident \textit{a priori} (such as the monotonic constraint), one can limit the space of the search. In the general case, however, a numerical optimisation is required. 
 
@@ -253,7 +257,7 @@
 				\\
 				& = \left( \vec{p}(\vec{z}) - \vec{q} \right) \cdot R \pdiv{\vec{c}}{z_m}
 			\end{spalign}
-			Since $\vec{q}$ is the BLP prediction we can once again see that the derivative is zero if the BLP obeys the constraints ($\vec{c} - D \vec{q} = 0$), so the C-BLP will always revert to the BLP if this meets our constraints. 
+			Since $\vec{q}$ is the BLP prediction we can once again see that the derivative is zero if the BLP obeys the constraints ($\vec{c} - D \vec{q} = 0$), so the CLP will always revert to the BLP if this meets our constraints. 
 		% \subsection{Mixed Constraints}
 
 		% 	We now consider the case where some of our constraints are exact equality constraints, whilst others are inequality constraints. We denote the equality constraints as $e(\{P\})$, and the inequality constraints as $m(\{P\})$. 
@@ -273,5 +277,171 @@
 		% 		\vec{\epsilon} = (D_e^T D_e)^{-1} D_e^T \vec{r}_e
 		% 	\end{equation}
 		% 	Where $D_e$ is the constraint matrix derived from the equality subset $\{e_j\}$, and so on.
+	\section{The CLUP}
 
+		In the prior work, we assumed the the function $g(t)$ was `handed down' to us to act as a prior function. However, this may induce biases in our predictor, meaning that:
+		\begin{equation}
+			\E{X_t - \hat{X}_t} \neq 0
+		\end{equation}
+		We should ideally search for an \textit{unbiased} predictor. The derivation of the Constrained Linear Unbiased Predictor (CLUP) should follow along similar lines to the standard BLUP, but we reproduce it in full for the sake of rigour. 
+
+		We suppose that our random variable $X_t$ can be written as:
+		\begin{equation}
+			X_t = m(t) + Y_t
+		\end{equation}
+		Where $m:R \to R$ is the `mean function' and $Y_t$ is a zero-mean random variable. Therefore:
+		\begin{equation}
+			\E{X_t} = m(t)
+		\end{equation}
+		The main difference between $m(t)$ and $g(t)$ is that we assumed $g(t)$ was just a prior to `help us along' without any intrinsic relation to $X_t$ -- here, however, we are asserting that $m(t)$ is a meaningful function -- albeit an incomputable one, since we remain unwilling to assert any properties on $\E{X_t}$. Because of this restriction, we cannot subtract away $m(t)$ from our data to formulate $\vec{X}^\prime = \vec{Y}$ -- we must keep everything in terms of our original, untransformed data.
+
+		We \textit{can}, however, assert that $m(t)$ can be decomposed into a sum of basis functions, $\vec{\varphi}(t)$, where $\varphi_i(t): \mathbb{R} \to \mathbb{R}$ is the $i^\text{th}$ basis function. We therefore have:
+		\begin{spalign}
+			m(t) & = \sum_{i = 0}^\omega \phi_i(t) \beta_i
+			\\
+			& = \vec{\beta} \cdot \vec{\varphi}(t)
+		\end{spalign}
+		We again note that $\vec{\beta}$ is not a known value, however, we continue in the expectation that it will cancel out in future. We also note that without further information we must assume that $\omega \to \infty$, in practive we can limit the dimensionality by assuming that $m_\omega(t) \approx m(t)$ for finite $\omega$. We can also formulate the matrix $\Phi$:
+		\begin{spalign}
+			\Phi \in \mathbb{R}^{\omega\times n} \text{ such that } \Phi_{ij} = \varphi_i(t_j)
+		\end{spalign}
+		Therefore:
+		\begin{spalign}
+			\vec{X}_i = \sum_{j}^\omega \Phi_{ji} \beta_j \LLR \vec{X} = \Phi^T \vec{\beta} + \vec{Y}
+		\end{spalign}
+		
+		
+		Our linear predictor takes the form:
+		\newcommand\vb{\vec{\beta}}
+		\begin{spalign}
+			\hat{X}_t & = \a \cdot \vec{X}
+			\\
+			& = \a \cdot (\Phi^T \vb) + \a \cdot \vec{Y}
+			\\
+			& = \vb \cdot (\Phi \a) + \a \cdot \vec{Y} \label{E:BLUP_X}
+		\end{spalign}
+		We can also note that:
+		\begin{spalign}
+			X_t - \hat{X}_t & = \left( \Phi \a - \vec{\varphi} \right) \cdot \vb + Y_t - \a \cdot \vec{Y}
+		\end{spalign}
+		Since $\E{Y} = \vec{0}$ and $\E{Y_t} = 0$ by definition, we note that the unbiased constraint is equal to:
+		\begin{spalign}
+			\E{X_t - \hat{X}_t} = 0 \LLR \left(\Phi\a - \vec{\varphi}\right) \cdot \E{\vec{\beta}} = 0
+		\end{spalign}
+		Therefore if we write our unbiased constraint as $\mathcal{U}_t = \E{X_t - \hat{X}_t}$, such that $\mathcal{U}_t = 0$ when the constraint is met:
+		\begin{spalign}
+			\mu_t \mathcal{U}_t & = \left( \mu_t \E{\vec{\beta}} \right) \cdot \left(\Phi\a - \vec{\varphi}\right)
+			\\
+			& = \tilde{\mu}_t \cdot \left(\Phi\a - \vec{\varphi}\right)
+		\end{spalign}
+		A suitable change of coordinates $\mu_t \to \tilde{\mu}_t$ therefore enables us to bypass the unknown $\E{\vec{\beta}}$. Hence the Lagrangian of the system takes the form:
+		\begin{spalign}
+			\mathcal{L}(\vec{a},\vec{\lambda},\{\tilde{\mu}\}) & = \sum_{t \in T} \left( \E{(X_t - \hat{X}_t)^2} + \tilde{\mu} \cdot \left(\Phi\a - \vec{\varphi}\right) \right)+ \sum_j \lambda_j h_j(\{\hat{X}\})
+			\\
+			& = \sum_{t \in T} \left(\E{X_t^2} + \a \cdot (K \a) - 2 \vec{k}_t \cdot \a + \tilde{\mu} \cdot \left(\Phi\a - \vec{\varphi}\right) \right)+ \sum_j \lambda_j h_j(\{\hat{X}\})
+		\end{spalign}
+		This is identical in form to \eref{E:LagrangeOptim}, with the addition of some additional constraints - those labelled by $\tilde{\mu}$, which act to ensure that $\E{X_t - \hat{X}_t} = 0$ for all $t\in T$, i.e. we are now including \textit{unbiasedness} as a constraint.
+
+		We have also introduced $\vec{k}_t$ and $K$ as the second moment matrices on $X$:
+		\begin{spalign}
+			K \in \mathbb{R}^{n\times n} ~~~~&~~~~ K_{ij} = \E{X_{t_i} X_{t_j}}
+			\\
+			\vec{k}_t \in \mathbb{R}^n ~~~~&~~~~[\vec{k}_t]_i = \E{X_t X_{t_i}}
+		\end{spalign}
+		We once again impose the linearity condition on our constraints, such that $h_j = c_j - \sum_k d_{jk} \hat{X}_{t_k}$:
+		\begin{spalign}
+			\vec{h} = \vec{c} - D \vec{p}
+		\end{spalign}
+		Where $\vec{p}_i = \hat{X}_{t_i}$. The Lagrangian therefore simplifies to:
+		\begin{spalign}
+			\mathcal{L}(\vec{a},\vec{\lambda},\{\tilde{\mu}\},\vec{c})& = \sum_{t \in T} \left(\E{X_t^2} + \a \cdot (K \a) - 2 \vec{k}_t \cdot \a + \tilde{\mu} \cdot \left(\Phi\a - \vec{\varphi}\right) \right)+ \vec{\lambda} \cdot \left( \vec{c} - D \vec{p} \right)
+		\end{spalign}
+		The Lagrangian derivatives are:
+		\begin{align}
+			\begin{split}
+			\pdiv{\mathcal{L}}{\ai} & = 2 K \ai - 2 \a \cdot \vec{k}_i + \Phi^T \tilde{\mu} +   \pdiv{\vec{p}}{\ai}(D^T\lambda)
+			\\
+			& = 2 K \ai - 2  \vec{k}_i + \Phi^T \tilde{\mu} + Q_i(\vec{X}) D^T\vec{\lambda}
+			\end{split}
+			\\\label{E:CLUP_Constraint}
+			\pdiv{\mathcal{L}}{\vec{\lambda}} & =\vec{c} - D\vec{p}
+			\\
+			\pdiv{\mathcal{L}}{\tilde{\mu}} & = \Phi_t \a - \vec{\varphi}_t \label{E:CLUP_Unbiased}
+		\end{align}
+		Where $Q_i(\vec{X})\vec{v} = \vec{v} \cdot \hat{e}_i \vec{X}$, and equivalently $Q_i^T \vec{v} = \vec{v} \cdot \vec{X} \hat{e}_i$
+		The optimal value of $\a$ is therefore at:
+		\def\vl{\vec{\lambda}}
+		\begin{spalign}
+			\ai & = K^{-1} \ai - 2 K^{-1} \Phi_i^T \tilde{\mu}_i + K^{-1} Q_i D^T \vec{\lambda} ß
+			\\
+			& = \vi - 2 K^{-1}\Phi_i^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \wi \label{E:CLUP_a}
+		\end{spalign}
+
+		\subsubsection{Applying Constraints}
+			We now impose the unbiased constraint - substituting \eref{E:CLUP_a} into \eref{E:CLUP_Unbiased}, which gives us:
+			\begin{spalign}
+				\Phi_i \vi - 2 \Phi_i K^{-1} \Phi_i^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi = \vec{\varphi}
+			\end{spalign}
+			Solving for $\tilde{\mu}_i$:
+			\begin{spalign}
+				\tilde{\mu}_i & = \frac{1}{2} \left(\Phi_i K^{-1} \Phi_i^T\right)^{-1} \left( \Phi_i \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \varphi\right)
+				\\
+				& = \frac{1}{2}{M^i}^{-1} \left( \Phi_i \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \varphi\right)
+			\end{spalign}
+			And therefore
+			\begin{spalign}
+				\ai & = \left(\mathds{1} - K^{-1} \Phi_i^T{M^i}^{-1}\Phi_i \right)\vi +K^{-1} \Phi_i^T {M^i}^{-1} \varphi + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi_i^T {M^i}^{-1} \Phi_i \right)\wi 
+				\\
+				& = B^i \vi + C^i \varphi + (D^T \vl) \cdot \hat{e}_i B^i \wi
+				\\
+				~
+				\\
+				& \text{where } C^i = K^{-1} \Phi_i^T{M^i}^{-1}
+				\\
+				& \text{and } B^i =  \left(\mathds{1} - C^i \Phi_i \right)
+			\end{spalign}
+
+			The prediction values are therefore:
+			\begin{spalign}
+				\hat{X}_i = P_i & = \ai \cdot \vec{X}
+				\\
+				& = (B^i{\vi} + C^i \vec{\varphi}_i)\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot B^i K^{-1} \vec{X}
+				\\
+				& = \alpha_i + (D^T \vl) \cdot \hat{e}_i \beta_i
+			\end{spalign}
+			Where $\alpha_i$ and $\beta_i$ are generalisations of the $A_i$ and $B_i$ terms used in the CLP. We can then form a vector of $\vec{p}_i = P_i$, such that:
+			\begin{equation}
+				\vec{p} = \vec{\alpha} + \vec{\beta} \otimes D^T \vl
+			\end{equation}
+			Here $\otimes$ is the element-wise Hadamard product. Inserting this into the imposed constraints of \eref{E:CLUP_Constraint}, we find:
+			\begin{spalign}
+				D \vec{p} & = \vec{c}
+				\\
+				D \vec{\alpha} + D  \left(\vec{\beta} \otimes\Big( D^T \vl\Big) \right) = \vec{c}
+				\\
+				\vec{\beta} \otimes\Big( D^T \vl\Big) & = (D^T D)^{-1} \left(D^T\vec{c} - D^TD \vec{\alpha} \right)
+				\\
+				D^T \vl & = \left[ (D^T D)^{-1} D^T\vec{c} - \vec{\alpha} \right] \oslash \vec{\beta}
+			\end{spalign}
+			We can then insert this back into the definition of $\ai$ to find:
+			\begin{spalign}
+				\ai = B^i \vi + C^i \vec{\varphi} + \frac{\left((D^T D)^{-1} D^T\vec{c}\right)\cdot\hat{e}_i - \alpha_i }{\beta_i} B^i \wi
+			\end{spalign}
+			Where:
+			\begin{spalign}
+				\vi & = K^{-1} \vec{k}_i
+				\\
+				\wi & = K^{-1} \vec{X}
+				\\
+				M^i & = \Phi_i K^{_1} \Phi_i^T
+				\\
+				C^i & = K^{-1} \Phi_i^T M^{i,-1}
+				\\
+				B^i & = \mathds{1} - C^i \Phi_i
+				\\
+				\alpha_i & = (B^i \vi + C^i \vec{\varphi}_i) \cdot \vec{X}
+				\\
+				\beta_i & = (B^i \wi) \cdot \vec{X}
+			\end{spalign}
+	\section{Optimising the Kernel}
 \end{document}

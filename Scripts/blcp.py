@@ -14,16 +14,16 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 0.00001
+dataNoise = 0.05
 learningRate = 0.1
 learningMemory = 0.8
-learningMemory_SecondMoment = 0.99
+learningMemory_SecondMoment = 0.995
 
 def kernel(x,y):
 	#covariance the kernel
 	d = abs(x-y)/kernelSigma
 	# return dataNoise*dataNoise/(1+(d)**2)
-	return  (np.exp(-0.5 * d**2))
+	return (np.exp(-0.5 * d**2))
 def kernelMatrix(sampleX):
 	#my attempt at computing K_ij, the covariance/ second moment matrix evaluated over the data
 	n = len(sampleX)
@@ -46,7 +46,7 @@ def BLP(predictT,dataT,dataX):
 	muData = Prior(dataT)#np.mean(dataX)
 	
 	#precompute some useful quantities
-	K=kernelMatrix(dataT) + (dataNoise/2)**2 * np.identity(len(dataT))
+	K=kernelMatrix(dataT) + (dataNoise/20)**2 * np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	KinvX = np.matmul(Kinv,dataX-muData)
 
@@ -73,26 +73,32 @@ def C_BLP(predictX,dataT,dataX,steps):
 	gPredict = Prior(predictX)
 	trueY = Func(predictX)
 	tData = dataX - Prior(dataT)
-	K=kernelMatrix(dataT) + (dataNoise/2)**2 * np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
-
+	w = np.matmul(Kinv,tData)
+	B = np.dot(w,tData)
 	q = np.zeros((len(predictX),1))
+	v = []
 	for i in range(len(predictX)):
 		t = predictX[i]
 		
 		k=kernelVector(dataT,t)
-		v = np.matmul(Kinv,k)
-		q[i] = np.dot(v,tData) + gPredict[i]
+		vi = np.matmul(Kinv,k)
+		v.append(vi)
+		q[i] = np.dot(vi,tData) + gPredict[i]
 
 	mDim = len(predictX) -1
-	zs = np.zeros((mDim,1))-7
+	# drange = np.ptp(dataX)/mDim
+	# print(drange)
+	zs = np.random.uniform(-6,-3,(mDim,1))
+	# print(zs)
 	cs = np.exp(zs)
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
 		D[i,i] = -1
 		D[i,i+1] = 1
-	
-	R = np.matmul(D.transpose(), np.linalg.inv(np.matmul(D, D.transpose())))
+	DDtinv = np.linalg.inv(np.matmul(D, D.transpose()))
+	R = np.matmul(D.transpose(), DDtinv)
 	Rt = R.transpose()
 	Rdq = np.matmul(np.matmul(R,D),q)
 	J = np.matmul(np.identity(len(predictX)) - np.matmul(R,D),q)
@@ -105,32 +111,16 @@ def C_BLP(predictX,dataT,dataX,steps):
 		cs = np.exp(zs)
 
 		Rc = np.matmul(R,cs)
-		# predict = J + Rc
 		diff = Rc - Rdq
-		# for i in range(len(grad)):
-		# 	# col = R[:,i] * cs[i]
-		# 	g = 0
-		# 	for j in range(len(grad)):
-		# 		g+= diff[j] * R[j,i] * cs[i] #col[j]
-		# 	grad[i] = g
-		# # Rtdiff = np.matmul(Rt,diff)
-		# print(np.shape(diff),np.shape(cs))
-		# grad2 = np.matmul(cs.transpose(),np.matmul(Rt,diff))
 		grad = np.multiply(cs,np.matmul(Rt,diff))
-		# print(grad.transpose()[1:5],grad2.transpose()[1;5÷])
-		# print(zs.transpose(),"\n",cs.transpose(),"\n",predict.transpose(),"\n",diff.transpose(),"\n",grad.transpose(),"\n\n")
-		# print("grad=",grad)
+		
 		#ADAM step routine
 		ms = learningMemory * ms + (1.0 - learningMemory)*grad
 		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
 		c1 = 1.0 - learningMemory**(s+1)
 		c2 = 1.0 - learningMemory_SecondMoment**(s+1)
 		eps = 1e-8
-		# r = 
-		# print(r)
-		# print(np.shape(zs),np.shape(ms),np.shape(vs),np.shape(r))
 		zs -= learningRate * np.divide(ms/c1,np.sqrt(eps + vs/c2))
-		# zs -= learningRate * grad
 		#prevents the prediction from 'dying' by going too negative
 		for j in range(1,len(zs)):
 			m = -20
@@ -140,15 +130,27 @@ def C_BLP(predictX,dataT,dataX,steps):
 			if zs[j] > l:
 				zs[j] = l
 
-
-	bestPredict = J + np.matmul(R,cs)
+	bestRc = np.matmul(R,cs)
+	bestPredict = J + bestRc
+	bestEta =1.0/B * np.matmul(R, np.matmul(D,q) - cs)
+	# print(bestEta)
+	# print(np.shape(bestEta),len(v),len(predictX))
 	rms = 0
-	for i in range(len(ps)):
+	mse = 0
+	for i in range(len(bestPredict)):
 		rms += (trueY[i] - bestPredict[i])**2
+		
+		t = predictX[i]
+		bestA = v[i] - bestEta[i] * w
+		k=kernelVector(dataT,t)
+		contrib = np.matmul(bestA.transpose(),np.matmul(K,bestA)) - 2*np.matmul(bestA.transpose(),k)
+		mse += contrib
+		# print(contrib,mse)
+	mse/=len(trueY)
 	rms/=len(trueY)
 	# print(cs.transpose())
 	# print(bestPredict.transpose())
-	return [bestPredict,np.sqrt(rms)]
+	return [bestPredict,np.sqrt(rms),mse]
 def BLCP(predictX,dataT,dataX,steps,zs	):
 	# zs = np.zeros(len(predictX))
 	# zs[1:]= -2
@@ -256,7 +258,7 @@ if mode == 0:
 		out[i:] = val
 		return out
 	def Func(t):
-		return 1.0/(1 + np.exp(-t)) + 1.0/(1 + np.exp(-3*(t-7))) 
+		return 1.0/(1 + np.exp(-t))
 if mode == 1:
 	deltaT = 1
 	def Transform(z):
@@ -308,81 +310,82 @@ if mode == 2:
 	def Func(t):
 		sig = 1.5
 		return 1.0/(np.sqrt(2*np.pi)*sig) * np.exp(- (t)**2/(2*sig**2))
-xMin = -6
-xMax = 5
+xMin = -10
+xMax = 10
 m = (Func(xMax) - Func(xMin))/(xMax - xMin)
 c = Func(xMin) -xMin *m
+
 def Prior(t):
-	return m * t + c
+	return (t-t)+c#m * t + c
 	# return Func(t)
 	# return t-t
+def PriorModifiedMSE(ell,ts,MSE):
+	ts =np.sort(ts)
+	meanDiff = np.mean(np.diff(ts))
+	span = np.ptp(ts)
+
+	ellMod = (ell - meanDiff)/span
+	return MSE + 0.5 * ellMod**2
+
 def GenerateData(nData):
-	# t = np.linspace(xMin,xMax,nData) + np.random.normal(0,1,nData,)
+	# t = np.linspace(xMin,xMax,nData)
 	t = np.random.uniform(xMin,xMax,nData)
-	x = Func(t) * (1 + np.random.normal(0,dataNoise,nData,))+np.random.normal(0,0.01,nData,)
+	x = Func(t) + np.random.normal(0,dataNoise,nData,)
 
 	return [t,x]
-np.random.seed(0)
-[t,x] = GenerateData(25)
-c = np.mean(x)
-tt = np.linspace(min(t),max(t),1000)
-pt.plot(tt,Func(tt),"k:",label="Underlying function")
-pt.plot(tt,Prior(tt),"r:",label="Prior")
-tt = np.linspace(min(t),max(t),300)
-deltaT = tt[1] - tt[0]
-pt.scatter(t,x,label="Data")
+# np.random.seed(0)
 
+ndat = 31
+[t,x] = GenerateData(ndat)
+# c = np.mean(x)
+tt = np.linspace(min(t),max(t),100)
+res = 50
+# sigmas = np.logspace(-,1,res,10)
+sigmas = np.linspace(0.1,10,res)
+mse = np.zeros(np.shape(sigmas))
+rms = np.zeros(np.shape(sigmas))
+fig,axs = pt.subplots(3,1)
+axs[0].plot(tt,Func(tt),"k:",label="True Function")
+axs[0].scatter(t,x,label="Data")
 
-[ps,rms] = BLP(tt,t,x)
-pt.plot(tt,ps,label="BLP, $\epsilon=$" + strRound(rms))
+for i in tqdm(range(res)):
+	# print("Attempt i")
+	kernelSigma = sigmas[i]
+	[ps,rmsi,msei] = C_BLP(tt,t,x,1500)
+	mse[i] = msei
+	rms[i] = rmsi
+	if i % int(res/6) == 0:
+		# print(i)
+		axs[0].plot(tt,ps,label="$\\theta=$"+strRound(kernelSigma))
+	# print(kernelSigma,msei,rmsi)
+mse -= np.min(mse)-1e-2
+mod = PriorModifiedMSE(sigmas,t,mse)
+prior = PriorModifiedMSE(sigmas,t,mse-mse)
+# mod -= np.min(mod)-1e-2
+prior -= np.min(prior)-1e-2
 
+y = np.argmin(mod)
+print("Minimum value = ", sigmas[y], "with prior centred at ",np.mean(np.diff(t)))
 
+axs[0].set_xlabel("t")
+axs[0].set_ylabel("X")
 
-# print(np.sum(ps) * deltaT)
+axs[1].plot(sigmas,mse,label="Raw Likelihood")
+axs[1].plot(sigmas,mod,label="With Prior")
+axs[1].plot(sigmas,prior,":",label="Prior Only")
+axs[1].legend()
+axs[1].set_xscale('log')
+axs[1].set_yscale('log')
+axs[1].set_xlabel("$\\theta$")
+axs[1].set_ylabel("Global MSE")
 
-# zinit = ps.copy()
-# prev = zinit[0]
-# for i in range(1,len(ps)):
-# 	if ps[i] > prev:
-# 		zinit[i] = np.log(ps[i] - prev)
-# 		prev = ps[i]
-# 	else:
-# 		zinit[i] = -10
+axs[2].plot(sigmas,rms)
+axs[2].set_xscale('log')
+axs[2].set_yscale('log')
+axs[2].set_xlabel("$\\theta$")
+axs[2].set_ylabel("True RMS")
 
-zinit = np.zeros(np.shape(ps))-5
-zinit[0] = -2#np.log(np.maximum(ps[0],0.01))
-
-Res = 400
-pt.title(str(Res) + " optim loops")
-alpha= 0.2*deltaT
-start = time.time()
-[ps,rms] = BLCP(tt,t,x,Res,zinit.copy())
-end = time.time()
-pt.plot(tt,ps,label="Old, $\\tau=$" + strRound(end-start) + "s")
-print("Old: ",end-start)
-start = time.time()
-[ps,rms] = C_BLP(tt,t,x,Res)
-end = time.time()
-print("New: ",end-start)
-pt.plot(tt,ps,label="New, $\\tau=$" + strRound(end-start)+"s")
-
-
-start = time.time()
-[ps,rms] = C_BLP(tt,t,x,10000)
-end = time.time()
-print("Hires: ",end-start)
-pt.plot(tt,ps,label="New @ 10,000res, $\\tau=$" + strRound(end-start) + "s")
-# [ps,rms] = C_BLP(tt,t,x,1200)
-# pt.plot(tt,ps,label="C-BLP-hi, $\epsilon=$" + strRound(rms))
-# [ps,rms] = BLCP(tt,t,x,3000,zinit.copy())
-# print(np.sum(ps) * deltaT)
-# pt.plot(tt,ps,label="BLCP-0.1-hi, $\epsilon=$" + strRound(rms))
-
-# [ps,rms] = BLCP(tt,t,x,1500,zinit)
-# print(np.sum(ps) * deltaT)
-# pt.plot(tt,ps,label="BLCP-hi, $\epsilon=$" + strRound(rms))
-
-pt.legend()
+axs[0].legend()
 pt.draw()
 pt.pause(0.01)
 
