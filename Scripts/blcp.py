@@ -15,8 +15,8 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 0.1
-learningRate = 0.5
+dataNoise = 5
+learningRate = 0.1
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
 
@@ -24,7 +24,7 @@ def kernel(x,y):
 	#covariance the kernel
 	d = abs(x-y)/kernelSigma
 	# return dataNoise*dataNoise/(1+(d)**2)
-	return (np.exp(-0.5 * d**2))
+	return 20*(np.exp(-0.5 * d**2))
 def kernelMatrix(sampleX):
 	#my attempt at computing K_ij, the covariance/ second moment matrix evaluated over the data
 	n = len(sampleX)
@@ -392,7 +392,7 @@ def CLUP(predictX,dataT,dataX,order,steps):
 		zs -= learningRate * np.divide(ms/c1,np.sqrt(eps + vs/c2))
 		#prevents the prediction from 'dying' by going too negative
 		for j in range(1,len(zs)):
-			m = -20
+			m = -10
 			if zs[j] < m:
 				zs[j] = m
 			l = 20
@@ -435,7 +435,7 @@ if mode == 0:
 		out[i:] = val
 		return out
 	def Func(t):
-		return 1.0/(1 + np.exp(-t))
+		return 70.0/(1 + np.exp(-t)) +100
 if mode == 1:
 	deltaT = 1
 	def Transform(z):
@@ -565,9 +565,9 @@ def optim():
 	specialShow()
 
 def blupTest():
-	ndat = 11
+	ndat = 31
 	global kernelSigma
-	kernelSigma = 1
+	kernelSigma = 2
 	[t,x] = GenerateData(ndat)
 	# c = np.mean(x)
 	tt = np.linspace(min(t),max(t),200)
@@ -598,21 +598,25 @@ def blupTest():
 
 	# pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
 
-	for order in range(0,1):
+	# for order in range(0,1):
+	# 	[blup,rms] = BLUP(tt,t,x,order)
+	# 	pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
+
+	cols =[u'b', u'g', u'r', u'c', u'm', u'y', u'k']
+	i = 0
+	for order in range(0,9,2):
 		[blup,rms] = BLUP(tt,t,x,order)
-		pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
-
-
-	for order in range(0,10):
+		s, = pt.plot(tt,blup,'--',label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
 		[clup,rms] = CLUP(tt,t,x,order,1000)
-		pt.plot(tt,clup,label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
+		pt.plot(tt,clup,color=s.get_color(),label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
 		# [clup,rms] = CLUP(tt,t,x,order,100)
 		# pt.plot(tt,clup,label=str(order)+"-CLUP-low, $\epsilon=$" + strRound(rms))
+		i+=1
 	pt.legend()
 	specialShow()
 
 
-np.random.seed(1)
+# np.random.seed(1)
 blupTest()
 
 # optim()
