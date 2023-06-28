@@ -443,6 +443,39 @@
 				\\
 				\beta_i & = (B^i \wi) \cdot \vec{X}
 			\end{spalign}
+
+			We reformulate our Lagrangian in terms of $\vec{c}$ in order to allow us to optimise w.r.t. to inexact constraints. For convenience, we write the matrix product as $H = D^T(D \mathcal{B} D^T)^{-1}$
+
+			\begin{spalign}
+				\vec{k}_i \cdot \ai & = \vec{k}_i \cdot \left(B^i \vi + C^i \vec{\varphi}_i \right) + \left(H\vec{c} - H D \vec{\alpha} \right)\cdot \hat{e}_i \vec{k} \cdot B^i \vec{w}
+				\\
+				\ai \cdot K \ai &  = \left(B^i \vi + C^i \vec{\varphi}_i \right) \cdot K \left(B^i \vi + C^i \vec{\varphi}_i \right) 
+				\\
+				& ~~+ 2\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i ~ \times \wi^T B^i K\left(B^i \vi + C^i \vec{\varphi}_i \right)
+				\\
+				& ~~ + \left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right)^2 \vec{w}^T B^i K B^i \vec{w}
+			\end{spalign}
+			Therefore:
+			\begin{spalign}
+				\ai \cdot K \ai - 2\ai \cdot{\vec{k}} & =\left(\vec{w}^T B^i K B^i \vec{w}\right) \left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right)^2 
+				\\
+				& + 2\left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right) \left(\wi^T B^i K\left(B^i \vi + C^i \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}\right)
+			\end{spalign}
+			As a result, we may write the derivative of the Lagrangian w.r.t. one of the constraint parameters ($\vec{z}_i$) as:
+			\begin{spalign}
+				\pdiv{\mathcal{L}^\prime}{z_m} = \left(H(c(\vec{z}) - D\vec{\alpha}) + \vec{\ell} \right) \cdot H \pdiv{\vec{c}}{z_m}
+			\end{spalign}
+			Where:
+			\begin{spalign}
+				\ell_i = \frac{\wi^T B^i K\left(B^i \vi + C^i \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}}{\vec{w}^T B^i K B^i \vec{w}}
+			\end{spalign}
+			We note that in the case where $\text{dim}(\Phi) = 0$ (i.e. the case where we do not allow any approximation to the mean function), then $C = 0$, $B^i = \mathds{1}, \alpha_i \to A_i$, and so:
+			\begin{spalign}
+				\ell_i &= \frac{\wi \cdot K K^{-1} \vec{k}_i - \vec{k}_i \cdot \wi}{\vec{X} K^{-1} \vec{X}}
+				\\
+				& = 0
+			\end{spalign}
+			We see that we have recovered the CLP solution, in the case where $g(t) = 0$ -- exactly as we might naively expect.
 			\newpage
 	\section{Optimising the Kernel}
 \end{document}
