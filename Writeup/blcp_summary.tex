@@ -359,7 +359,7 @@
 		The Lagrangian derivatives are:
 		\begin{align}
 			\begin{split}
-			\pdiv{\mathcal{L}}{\ai} & = 2 K \ai - 2 \a \cdot \vec{k}_i + \Phi^T \tilde{\mu} +   \pdiv{\vec{p}}{\ai}(D^T\lambda)
+			\pdiv{\mathcal{L}}{\ai} & = 2 K \ai - 2 \vec{k}_i + \Phi^T \tilde{\mu} +   \pdiv{\vec{p}}{\ai}(D^T\lambda)
 			\\
 			& = 2 K \ai - 2  \vec{k}_i + \Phi^T \tilde{\mu} + Q_i(\vec{X}) D^T\vec{\lambda}
 			\end{split}
@@ -386,17 +386,17 @@
 			\begin{spalign}
 				\tilde{\mu}_i & = \frac{1}{2} \left(\Phi K^{-1} \Phi^T\right)^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
 				\\
-				& = \frac{1}{2}{M^i}^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
+				& = \frac{1}{2}{M}^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
 			\end{spalign}
 			And therefore
 			\begin{spalign}
-				\ai & = \left(\mathds{1} - K^{-1} \Phi^T{M^i}^{-1}\Phi \right)\vi +K^{-1} \Phi^T {M^i}^{-1} \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi^T {M^i}^{-1} \Phi \right)\wi 
+				\ai & = \left(\mathds{1} - K^{-1} \Phi^T{M}^{-1}\Phi \right)\vi +K^{-1} \Phi^T {M}^{-1} \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi^T {M}^{-1} \Phi \right)\wi 
 				\\
 				& = B^i \vi + C^i \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
 				\\
 				~
 				\\
-				& \text{where } C^i = K^{-1} \Phi^T{M^i}^{-1}
+				& \text{where } C^i = K^{-1} \Phi^T{M}^{-1}
 				\\
 				& \text{and } B^i =  \left(\mathds{1} - C^i \Phi \right)
 			\end{spalign}
@@ -433,7 +433,7 @@
 				\\
 				\wi & = K^{-1} \vec{X}
 				\\
-				M^i & = \Phi K^{_1} \Phi^T
+				M & = \Phi K^{-1} \Phi^T
 				\\
 				C^i & = K^{-1} \Phi^T M^{i,-1}
 				\\

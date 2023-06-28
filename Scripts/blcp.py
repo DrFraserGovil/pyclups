@@ -14,7 +14,7 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 0.05
+dataNoise = 0.03
 learningRate = 0.1
 learningMemory = 0.8
 learningMemory_SecondMoment = 0.995
@@ -32,6 +32,21 @@ def kernelMatrix(sampleX):
 		for j in range(n):
 			K[i,j] = kernel(sampleX[i],sampleX[j])
 	return K
+
+
+def phi(i,t):
+	if i == 0:
+		return t-t+1
+	if i == 1:
+		return 2*t
+	if i == 2:
+		return 4*t**2 - 2
+	if i == 3:
+		return 8*t**3 - 12*t
+	if i == 4:
+		return 16*t**4 -48*t**2 + 12
+	if i == 5:
+		return 32*t**5 - 160*t**3 + 120*t 
 
 def kernelVector(sampleX,t):
 	#my attempt at computing k_i, the covariance/ second moment vector evaluated over the data, at time t
@@ -236,6 +251,99 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	# ps += meanFunc(predictX)
 	return [ps,np.sqrt(rms)]
 
+def BLUP(predictX,dataT,dataX,order):
+	
+	#precompute some useful quantities
+	K=kernelMatrix(dataT) + (dataNoise/20)**2 * np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+	Phi = np.zeros((order+1,len(dataT)))
+	for m in range(0,order+1):
+		for j in range(len(dataT)):
+			Phi[m,j] = phi(m,dataT[j])
+
+	PhiT = Phi.transpose()
+	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
+	Minv = np.linalg.inv(M)
+	obj = np.matmul(PhiT,Minv)
+	n = len(dataT)
+	mat1 = np.matmul(Kinv,np.identity(n)-np.matmul(obj,np.matmul(Phi,Kinv)))
+
+	ps = np.zeros(len(predictX),)
+	phiVec = np.zeros(order+1)
+	trueY = Func(predictX)
+	rms = 0
+	for i in range(len(predictX)):
+		t = predictX[i]
+		
+		for j in range(order+1):
+			phiVec[j] = phi(j,t)
+		k = kernelVector(dataT,t)
+		
+
+
+		a = np.matmul(mat1,k) + np.matmul(np.matmul(Kinv,obj),phiVec)
+
+		ps[i] = np.dot(a,dataX)
+		rms += (trueY[i] - ps[i])**2
+
+	rms = np.sqrt(rms/len(ps))
+	return [ps,rms]
+
+
+def CLUP(predictX,dataT,dataX,order,steps):
+
+	gPredict = Prior(predictX)
+	trueY = Func(predictX)
+	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+	w = np.matmul(Kinv,dataX)
+	q = np.zeros((len(predictX),1))
+
+	Phi = np.zeros((order+1,len(dataT)))
+	for m in range(0,order+1):
+		for j in range(len(dataT)):
+			Phi[m,j] = phi(m,dataT[j])
+
+	phis = []
+	v = []
+	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
+	Minv = np.linalg.inv(M)
+	for i in range(len(predictX)):
+		t = predictX[i]
+		
+		k=kernelVector(dataT,t)
+		vi = np.matmul(Kinv,k)
+		v.append(vi)
+		q[i] = np.dot(vi,dataX) + gPredict[i]
+		phiVec = np.zeros(order+1)
+		for j in range(order+1):
+			phiVec[j] = phi(j,t)
+		phis.append(phiVec)
+
+	PhiT = Phi.transpose()
+	
+
+
+	mDim = len(predictX) -1
+	# drange = np.ptp(dataX)/mDim
+	# print(drange)
+	zs = np.random.uniform(-6,-3,(mDim,1))
+	# print(zs)
+	cs = np.exp(zs)
+	D = np.zeros((mDim,mDim+1))
+	for i in range(mDim):
+		D[i,i] = -1
+		D[i,i+1] = 1
+	DDtinv = np.linalg.inv(np.matmul(D, D.transpose()))
+	R = np.matmul(D.transpose(), DDtinv)
+	Rt = R.transpose()
+	Rdq = np.matmul(np.matmul(R,D),q)
+	J = np.matmul(np.identity(len(predictX)) - np.matmul(R,D),q)
+
+	ms = np.zeros((len(zs),1))
+	vs = np.zeros((len(zs),1))
+	grad = np.zeros((len(zs),1))
+
 
 mode = 0
 
@@ -282,11 +390,6 @@ if mode == 2:
 		li[1:] = alpha * (np.exp(z[1:])-1)/(np.exp(z[1:])+1)
 
 		out = np.cumsum(li)
-		# print(z)
-		# print(li)
-		# print(np.cumsum(li))
-		# print(out)
-		# p = o
 		return np.exp(out)
 	def TransformDerivative(z,i):
 		# li = np.zeros(np.shape(z))
@@ -300,10 +403,6 @@ if mode == 2:
 		else:
 			
 			g[i:] = 2*alpha*T[i:]*np.exp(-z[i])/(np.exp(-z[i])+1)**2
-		# print("i=",i)
-		# print(z)
-		# print(T)
-		# print(g)
 	
 		return g
 		
@@ -316,7 +415,7 @@ m = (Func(xMax) - Func(xMin))/(xMax - xMin)
 c = Func(xMin) -xMin *m
 
 def Prior(t):
-	return (t-t)+c#m * t + c
+	return m * t + c
 	# return Func(t)
 	# return t-t
 def PriorModifiedMSE(ell,ts,MSE):
@@ -328,65 +427,118 @@ def PriorModifiedMSE(ell,ts,MSE):
 	return MSE + 0.5 * ellMod**2
 
 def GenerateData(nData):
-	# t = np.linspace(xMin,xMax,nData)
-	t = np.random.uniform(xMin,xMax,nData)
+	scatter = 0.3
+	t = np.linspace(xMin,xMax,nData) + scatter * np.random.normal(0,1,nData,)
+	# t = np.random.uniform(xMin,xMax,nData)
+	t = np.sort(t)
 	x = Func(t) + np.random.normal(0,dataNoise,nData,)
-
 	return [t,x]
-# np.random.seed(0)
 
-ndat = 31
-[t,x] = GenerateData(ndat)
-# c = np.mean(x)
-tt = np.linspace(min(t),max(t),100)
-res = 50
-# sigmas = np.logspace(-,1,res,10)
-sigmas = np.linspace(0.1,10,res)
-mse = np.zeros(np.shape(sigmas))
-rms = np.zeros(np.shape(sigmas))
-fig,axs = pt.subplots(3,1)
-axs[0].plot(tt,Func(tt),"k:",label="True Function")
-axs[0].scatter(t,x,label="Data")
+def specialShow():
+	pt.draw()
+	pt.pause(0.01)
+	input("Enter to exit")
 
-for i in tqdm(range(res)):
-	# print("Attempt i")
-	kernelSigma = sigmas[i]
-	[ps,rmsi,msei] = C_BLP(tt,t,x,1500)
-	mse[i] = msei
-	rms[i] = rmsi
-	if i % int(res/6) == 0:
-		# print(i)
-		axs[0].plot(tt,ps,label="$\\theta=$"+strRound(kernelSigma))
-	# print(kernelSigma,msei,rmsi)
-mse -= np.min(mse)-1e-2
-mod = PriorModifiedMSE(sigmas,t,mse)
-prior = PriorModifiedMSE(sigmas,t,mse-mse)
-# mod -= np.min(mod)-1e-2
-prior -= np.min(prior)-1e-2
+def optim():
 
-y = np.argmin(mod)
-print("Minimum value = ", sigmas[y], "with prior centred at ",np.mean(np.diff(t)))
+	ndat = 31
+	[t,x] = GenerateData(ndat)
+	# c = np.mean(x)
+	tt = np.linspace(min(t),max(t),100)
+	res = 150
+	# sigmas = np.logspace(-,1,res,10)
+	sigmas = np.linspace(0.1,10,res)
+	mse = np.zeros(np.shape(sigmas))
+	rms = np.zeros(np.shape(sigmas))
+	fig,axs = pt.subplots(3,1)
+	axs[0].plot(tt,Func(tt),"k:",label="True Function")
+	axs[0].scatter(t,x,label="Data")
 
-axs[0].set_xlabel("t")
-axs[0].set_ylabel("X")
+	for i in tqdm(range(res)):
+		# print("Attempt i")
+		global kernelSigma
+		kernelSigma = sigmas[i]
+		[ps,rmsi,msei] = C_BLP(tt,t,x,500)
+		mse[i] = msei
+		rms[i] = rmsi
+		if i % int(res/6) == 0:
+			# print(i)
+			axs[0].plot(tt,ps,label="$\\theta=$"+strRound(kernelSigma))
+		# print(kernelSigma,msei,rmsi)
+	mse -= np.min(mse)-1e-2
+	mod = PriorModifiedMSE(sigmas,t,mse)
+	prior = PriorModifiedMSE(sigmas,t,mse-mse)
+	# mod -= np.min(mod)-1e-2
+	prior -= np.min(prior)-1e-2
 
-axs[1].plot(sigmas,mse,label="Raw Likelihood")
-axs[1].plot(sigmas,mod,label="With Prior")
-axs[1].plot(sigmas,prior,":",label="Prior Only")
-axs[1].legend()
-axs[1].set_xscale('log')
-axs[1].set_yscale('log')
-axs[1].set_xlabel("$\\theta$")
-axs[1].set_ylabel("Global MSE")
+	y = np.argmin(mod)
+	print("Minimum value = ", sigmas[y], "with prior centred at ",np.mean(np.diff(t)))
 
-axs[2].plot(sigmas,rms)
-axs[2].set_xscale('log')
-axs[2].set_yscale('log')
-axs[2].set_xlabel("$\\theta$")
-axs[2].set_ylabel("True RMS")
+	axs[0].set_xlabel("t")
+	axs[0].set_ylabel("X")
 
-axs[0].legend()
-pt.draw()
-pt.pause(0.01)
+	axs[1].plot(sigmas,mse,label="Raw Likelihood")
+	axs[1].plot(sigmas,mod,label="With Prior")
+	axs[1].plot(sigmas,prior,":",label="Prior Only")
+	axs[1].legend()
+	axs[1].set_xscale('log')
+	axs[1].set_yscale('log')
+	axs[1].set_xlabel("$\\theta$")
+	axs[1].set_ylabel("Global MSE")
 
-input("Enter to exit")
+	axs[2].plot(sigmas,rms)
+	axs[2].set_xscale('log')
+	axs[2].set_yscale('log')
+	axs[2].set_xlabel("$\\theta$")
+	axs[2].set_ylabel("True RMS")
+
+	axs[0].legend()
+	specialShow()
+
+def blupTest():
+	ndat = 11
+	global kernelSigma
+	kernelSigma = 1
+	[t,x] = GenerateData(ndat)
+	# c = np.mean(x)
+	tt = np.linspace(min(t),max(t),200)
+	res = 150
+	pt.plot(tt,Func(tt),"k:",label="True Function")	
+	pt.scatter(t,x,label="Data")
+	
+	
+	
+
+	global m,c
+	oldm = m
+	oldc = c
+	m=0
+	c=0
+	[blp,rms] = BLP(tt,t,x)
+	pt.plot(tt,blp,label="BLP, $\epsilon=$" + strRound(rms))
+	[clp,rms,mse] = C_BLP(tt,t,x,1000)
+	pt.plot(tt,clp,label="CLP, $\epsilon=$" + strRound(rms))
+
+	m=oldm
+	c = oldc
+	priort = t[1:-1]
+	priorx = x[1:-1]
+	print(len(t),len(priort))
+	[blp,rms] = BLP(tt,priort,priorx)
+	pt.plot(tt,blp,label="BLP_Prior, $\epsilon=$" + strRound(rms))
+	[clp,rms,mse] = C_BLP(tt,priort,priorx,1000)
+	pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
+
+	for order in range(0,5):
+		[blup,rms] = BLUP(tt,t,x,order)
+		pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
+
+
+	pt.legend()
+	specialShow()
+
+
+np.random.seed(1)
+blupTest()
+
+# optim()
