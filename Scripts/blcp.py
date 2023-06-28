@@ -14,10 +14,10 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 0.03
-learningRate = 0.1
-learningMemory = 0.8
-learningMemory_SecondMoment = 0.995
+dataNoise = 0.1
+learningRate = 0.3
+learningMemory = 0.7
+learningMemory_SecondMoment = 0.99
 
 def kernel(x,y):
 	#covariance the kernel
@@ -298,20 +298,32 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	Kinv = np.linalg.inv(K)
 	w = np.matmul(Kinv,dataX)
 	q = np.zeros((len(predictX),1))
-
+	n = len(dataX)
 	Phi = np.zeros((order+1,len(dataT)))
 	for m in range(0,order+1):
 		for j in range(len(dataT)):
 			Phi[m,j] = phi(m,dataT[j])
-
+	PhiT = Phi.transpose()
 	phis = []
 	v = []
 	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
 	Minv = np.linalg.inv(M)
+	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
+	Bmat = np.identity(n)-np.matmul(C,Phi)
+	alpha = np.zeros((len(predictX),1))
+	beta = np.zeros((len(predictX),1))
+	curlyB = np.zeros((len(beta),len(beta)))
+	ell = np.zeros((len(predictX),1))
+	vecs =[]
+	ks = []
+	ellBottom = np.dot(w,np.matmul(Bmat,np.matmul(K,np.matmul(Bmat,w))))
+	ellLeft = np.matmul(K,np.matmul(Bmat,w))
 	for i in range(len(predictX)):
+		# print(i)
 		t = predictX[i]
 		
 		k=kernelVector(dataT,t)
+		ks.append(k)
 		vi = np.matmul(Kinv,k)
 		v.append(vi)
 		q[i] = np.dot(vi,dataX) + gPredict[i]
@@ -320,30 +332,74 @@ def CLUP(predictX,dataT,dataX,order,steps):
 			phiVec[j] = phi(j,t)
 		phis.append(phiVec)
 
-	PhiT = Phi.transpose()
+
+		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
+		vecs.append(vec)
+		alpha[i] = np.dot(vec,dataX)
+		beta[i] = np.dot(np.matmul(Bmat,w),dataX)
 	
+		curlyB[i,i] = beta[i]
+
+		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
+		ell[i] = ellTop/ellBottom
+		
 
 
 	mDim = len(predictX) -1
-	# drange = np.ptp(dataX)/mDim
-	# print(drange)
-	zs = np.random.uniform(-6,-3,(mDim,1))
-	# print(zs)
+	zs = np.random.uniform(-1,1,(mDim,1))
 	cs = np.exp(zs)
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
 		D[i,i] = -1
 		D[i,i+1] = 1
-	DDtinv = np.linalg.inv(np.matmul(D, D.transpose()))
-	R = np.matmul(D.transpose(), DDtinv)
-	Rt = R.transpose()
-	Rdq = np.matmul(np.matmul(R,D),q)
-	J = np.matmul(np.identity(len(predictX)) - np.matmul(R,D),q)
 
+
+	DBDTinv = np.linalg.inv(np.matmul(D,np.matmul(curlyB,D.transpose())))
+	Dalpha = np.matmul(D,alpha)
+	H = np.matmul(D.transpose(),DBDTinv)
+	Ht = H.transpose()
 	ms = np.zeros((len(zs),1))
 	vs = np.zeros((len(zs),1))
 	grad = np.zeros((len(zs),1))
 
+	for s in range(steps):
+		cs = np.exp(zs)
+
+		diff = np.matmul(H,cs-Dalpha)+ell
+		
+		grad = np.multiply(cs,np.matmul(Ht,diff))
+		
+		#ADAM step routine
+		ms = learningMemory * ms + (1.0 - learningMemory)*grad
+		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
+		c1 = 1.0 - learningMemory**(s+1)
+		c2 = 1.0 - learningMemory_SecondMoment**(s+1)
+		eps = 1e-8
+		zs -= learningRate * np.divide(ms/c1,np.sqrt(eps + vs/c2))
+		#prevents the prediction from 'dying' by going too negative
+		for j in range(1,len(zs)):
+			m = -20
+			if zs[j] < m:
+				zs[j] = m
+			l = 20
+			if zs[j] > l:
+				zs[j] = l
+
+	ps = np.zeros(len(predictX),)
+	rms=0
+	correct = np.matmul(H,cs-Dalpha)
+	# print(correct)
+	R = np.matmul(Bmat,w)
+	print(R)
+	for i in range(len(predictX)):
+
+		ai = vecs[i]+ correct[i] * R
+		# print(ai)
+		ps[i] = np.dot(ai,dataX)
+		rms += (trueY[i] - ps[i])**2
+	# print(ps)
+	rms = np.sqrt(rms/len(ps))
+	return [ps,rms]
 
 mode = 0
 
@@ -366,7 +422,7 @@ if mode == 0:
 		out[i:] = val
 		return out
 	def Func(t):
-		return 1.0/(1 + np.exp(-t))
+		return 300.0/(1 + np.exp(-t))+1000
 if mode == 1:
 	deltaT = 1
 	def Transform(z):
@@ -498,10 +554,10 @@ def optim():
 def blupTest():
 	ndat = 11
 	global kernelSigma
-	kernelSigma = 1
+	kernelSigma = 3
 	[t,x] = GenerateData(ndat)
 	# c = np.mean(x)
-	tt = np.linspace(min(t),max(t),200)
+	tt = np.linspace(min(t),max(t),100)
 	res = 150
 	pt.plot(tt,Func(tt),"k:",label="True Function")	
 	pt.scatter(t,x,label="Data")
@@ -509,31 +565,32 @@ def blupTest():
 	
 	
 
-	global m,c
-	oldm = m
-	oldc = c
-	m=0
-	c=0
-	[blp,rms] = BLP(tt,t,x)
-	pt.plot(tt,blp,label="BLP, $\epsilon=$" + strRound(rms))
-	[clp,rms,mse] = C_BLP(tt,t,x,1000)
-	pt.plot(tt,clp,label="CLP, $\epsilon=$" + strRound(rms))
+	# global m,c
+	# oldm = m
+	# oldc = c
+	# m=0
+	# c=0
+	# [blp,rms] = BLP(tt,t,x)
+	# pt.plot(tt,blp,label="BLP, $\epsilon=$" + strRound(rms))
+	# [clp,rms,mse] = C_BLP(tt,t,x,2000)
+	# pt.plot(tt,clp,label="CLP, $\epsilon=$" + strRound(rms))
 
-	m=oldm
-	c = oldc
-	priort = t[1:-1]
-	priorx = x[1:-1]
-	print(len(t),len(priort))
-	[blp,rms] = BLP(tt,priort,priorx)
-	pt.plot(tt,blp,label="BLP_Prior, $\epsilon=$" + strRound(rms))
-	[clp,rms,mse] = C_BLP(tt,priort,priorx,1000)
-	pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
+	# m=oldm
+	# c = oldc
+	# priort = t[1:-1]
+	# priorx = x[1:-1]
+	# [blp,rms] = BLP(tt,priort,priorx)
+	# pt.plot(tt,blp,label="BLP_Prior, $\epsilon=$" + strRound(rms))
+	# [clp,rms,mse] = C_BLP(tt,priort,priorx,1000)
+	# pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
 
-	for order in range(0,5):
+	for order in range(4,5):
 		[blup,rms] = BLUP(tt,t,x,order)
 		pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
 
-
+	for order in range(4,5):
+		[clup,rms] = CLUP(tt,t,x,order,5000)
+		pt.plot(tt,clup,label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
 	pt.legend()
 	specialShow()
 

@@ -372,7 +372,7 @@
 		The optimal value of $\a$ is therefore at:
 		\def\vl{\vec{\lambda}}
 		\begin{spalign}
-			\ai & = K^{-1} \ai - 2 K^{-1} \Phi^T \tilde{\mu}_i + K^{-1} Q_i D^T \vec{\lambda} ß
+			\ai & = K^{-1} \vec{k}_i - 2 K^{-1} \Phi^T \tilde{\mu}_i + K^{-1} Q_i D^T \vec{\lambda}
 			\\
 			& = \vi - 2 K^{-1}\Phi^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \wi \label{E:CLUP_a}
 		\end{spalign}
@@ -392,20 +392,20 @@
 			\begin{spalign}
 				\ai & = \left(\mathds{1} - K^{-1} \Phi^T{M}^{-1}\Phi \right)\vi +K^{-1} \Phi^T {M}^{-1} \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi^T {M}^{-1} \Phi \right)\wi 
 				\\
-				& = B^i \vi + C^i \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
+				& = B^i \vi + C \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
 				\\
 				~
 				\\
-				& \text{where } C^i = K^{-1} \Phi^T{M}^{-1}
+				& \text{where } C = K^{-1} \Phi^T{M}^{-1}
 				\\
-				& \text{and } B^i =  \left(\mathds{1} - C^i \Phi \right)
+				& \text{and } B^i =  \left(\mathds{1} - C \Phi \right)
 			\end{spalign}
 
 			The prediction values are therefore:
 			\begin{spalign}
 				\hat{X}_i = P_i & = \ai \cdot \vec{X}
 				\\
-				& = (B^i{\vi} + C^i \vec{\varphi}_i)\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot B^i K^{-1} \vec{X}
+				& = (B^i{\vi} + C \vec{\varphi}_i)\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot B^i K^{-1} \vec{X}
 				\\
 				& = \alpha_i + (D^T \vl) \cdot \hat{e}_i \beta_i
 			\end{spalign}
@@ -425,7 +425,7 @@
 			\end{spalign}
 			We can then insert this back into the definition of $\ai$ to find:
 			\begin{spalign}
-				\ai = B^i \vi + C^i \vec{\varphi}_i + \left(D^T \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)\right)\cdot \hat{e}_i B^i \wi
+				\ai = B^i \vi + C \vec{\varphi}_i + \left(D^T \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)\right)\cdot \hat{e}_i B^i \wi
 			\end{spalign}
 			Where:
 			\begin{spalign}
@@ -435,11 +435,11 @@
 				\\
 				M & = \Phi K^{-1} \Phi^T
 				\\
-				C^i & = K^{-1} \Phi^T M^{i,-1}
+				C & = K^{-1} \Phi^T M^{i,-1}
 				\\
-				B^i & = \mathds{1} - C^i \Phi
+				B^i & = \mathds{1} - C \Phi
 				\\
-				\alpha_i & = (B^i \vi + C^i \vec{\varphi}_i) \cdot \vec{X}
+				\alpha_i & = (B^i \vi + C \vec{\varphi}_i) \cdot \vec{X}
 				\\
 				\beta_i & = (B^i \wi) \cdot \vec{X}
 			\end{spalign}
@@ -447,11 +447,11 @@
 			We reformulate our Lagrangian in terms of $\vec{c}$ in order to allow us to optimise w.r.t. to inexact constraints. For convenience, we write the matrix product as $H = D^T(D \mathcal{B} D^T)^{-1}$
 
 			\begin{spalign}
-				\vec{k}_i \cdot \ai & = \vec{k}_i \cdot \left(B^i \vi + C^i \vec{\varphi}_i \right) + \left(H\vec{c} - H D \vec{\alpha} \right)\cdot \hat{e}_i \vec{k} \cdot B^i \vec{w}
+				\vec{k}_i \cdot \ai & = \vec{k}_i \cdot \left(B^i \vi + C \vec{\varphi}_i \right) + \left(H\vec{c} - H D \vec{\alpha} \right)\cdot \hat{e}_i \vec{k} \cdot B^i \vec{w}
 				\\
-				\ai \cdot K \ai &  = \left(B^i \vi + C^i \vec{\varphi}_i \right) \cdot K \left(B^i \vi + C^i \vec{\varphi}_i \right) 
+				\ai \cdot K \ai &  = \left(B^i \vi + C \vec{\varphi}_i \right) \cdot K \left(B^i \vi + C \vec{\varphi}_i \right) 
 				\\
-				& ~~+ 2\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i ~ \times \wi^T B^i K\left(B^i \vi + C^i \vec{\varphi}_i \right)
+				& ~~+ 2\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i ~ \times \wi^T B^i K\left(B^i \vi + C \vec{\varphi}_i \right)
 				\\
 				& ~~ + \left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right)^2 \vec{w}^T B^i K B^i \vec{w}
 			\end{spalign}
@@ -459,7 +459,7 @@
 			\begin{spalign}
 				\ai \cdot K \ai - 2\ai \cdot{\vec{k}} & =\left(\vec{w}^T B^i K B^i \vec{w}\right) \left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right)^2 
 				\\
-				& + 2\left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right) \left(\wi^T B^i K\left(B^i \vi + C^i \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}\right)
+				& + 2\left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right) \left(\wi^T B^i K\left(B^i \vi + C \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}\right)
 			\end{spalign}
 			As a result, we may write the derivative of the Lagrangian w.r.t. one of the constraint parameters ($\vec{z}_i$) as:
 			\begin{spalign}
@@ -467,7 +467,7 @@
 			\end{spalign}
 			Where:
 			\begin{spalign}
-				\ell_i = \frac{\wi^T B^i K\left(B^i \vi + C^i \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}}{\vec{w}^T B^i K B^i \vec{w}}
+				\ell_i = \frac{\wi^T B^i K\left(B^i \vi + C \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}}{\vec{w}^T B^i K B^i \vec{w}}
 			\end{spalign}
 			We note that in the case where $\text{dim}(\Phi) = 0$ (i.e. the case where we do not allow any approximation to the mean function), then $C = 0$, $B^i = \mathds{1}, \alpha_i \to A_i$, and so:
 			\begin{spalign}
