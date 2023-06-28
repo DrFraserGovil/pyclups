@@ -322,17 +322,17 @@
 		\end{spalign}
 		We can also note that:
 		\begin{spalign}
-			X_t - \hat{X}_t & = \left( \Phi \a - \vec{\varphi} \right) \cdot \vb + Y_t - \a \cdot \vec{Y}
+			X_t - \hat{X}_t & = \left( \Phi \a - \vec{\varphi}_t \right) \cdot \vb + Y_t - \a \cdot \vec{Y}
 		\end{spalign}
 		Since $\E{Y} = \vec{0}$ and $\E{Y_t} = 0$ by definition, we note that the unbiased constraint is equal to:
 		\begin{spalign}
-			\E{X_t - \hat{X}_t} = 0 \LLR \left(\Phi\a - \vec{\varphi}\right) \cdot \E{\vec{\beta}} = 0
+			\E{X_t - \hat{X}_t} = 0 \LLR \left(\Phi\a - \vec{\varphi}_t\right) \cdot \E{\vec{\beta}} = 0
 		\end{spalign}
 		Therefore if we write our unbiased constraint as $\mathcal{U}_t = \E{X_t - \hat{X}_t}$, such that $\mathcal{U}_t = 0$ when the constraint is met:
 		\begin{spalign}
-			\mu_t \mathcal{U}_t & = \left( \mu_t \E{\vec{\beta}} \right) \cdot \left(\Phi\a - \vec{\varphi}\right)
+			\mu_t \mathcal{U}_t & = \left( \mu_t \E{\vec{\beta}} \right) \cdot \left(\Phi\a - \vec{\varphi}_t\right)
 			\\
-			& = \tilde{\mu}_t \cdot \left(\Phi\a - \vec{\varphi}\right)
+			& = \tilde{\mu}_t \cdot \left(\Phi\a - \vec{\varphi}_t\right)
 		\end{spalign}
 		A suitable change of coordinates $\mu_t \to \tilde{\mu}_t$ therefore enables us to bypass the unknown $\E{\vec{\beta}}$. Hence the Lagrangian of the system takes the form:
 		\begin{spalign}
@@ -354,7 +354,7 @@
 		\end{spalign}
 		Where $\vec{p}_i = \hat{X}_{t_i}$. The Lagrangian therefore simplifies to:
 		\begin{spalign}
-			\mathcal{L}(\vec{a},\vec{\lambda},\{\tilde{\mu}\},\vec{c})& = \sum_{t \in T} \left(\E{X_t^2} + \a \cdot (K \a) - 2 \vec{k}_t \cdot \a + \tilde{\mu} \cdot \left(\Phi\a - \vec{\varphi}\right) \right)+ \vec{\lambda} \cdot \left( \vec{c} - D \vec{p} \right)
+			\mathcal{L}(\vec{a},\vec{\lambda},\{\tilde{\mu}\},\vec{c})& = \sum_{t \in T} \left(\E{X_t^2} + \a \cdot (K \a) - 2 \vec{k}_t \cdot \a + \tilde{\mu} \cdot \left(\Phi\a - \vec{\varphi}_t\right) \right)+ \vec{\lambda} \cdot \left( \vec{c} - D \vec{p} \right)
 		\end{spalign}
 		The Lagrangian derivatives are:
 		\begin{align}
@@ -372,33 +372,33 @@
 		The optimal value of $\a$ is therefore at:
 		\def\vl{\vec{\lambda}}
 		\begin{spalign}
-			\ai & = K^{-1} \ai - 2 K^{-1} \Phi_i^T \tilde{\mu}_i + K^{-1} Q_i D^T \vec{\lambda} ß
+			\ai & = K^{-1} \ai - 2 K^{-1} \Phi^T \tilde{\mu}_i + K^{-1} Q_i D^T \vec{\lambda} ß
 			\\
-			& = \vi - 2 K^{-1}\Phi_i^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \wi \label{E:CLUP_a}
+			& = \vi - 2 K^{-1}\Phi^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \wi \label{E:CLUP_a}
 		\end{spalign}
 
 		\subsubsection{Applying Constraints}
 			We now impose the unbiased constraint - substituting \eref{E:CLUP_a} into \eref{E:CLUP_Unbiased}, which gives us:
 			\begin{spalign}
-				\Phi_i \vi - 2 \Phi_i K^{-1} \Phi_i^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi = \vec{\varphi}
+				\Phi \vi - 2 \Phi K^{-1} \Phi^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi = \vec{\varphi}_i
 			\end{spalign}
-			Solving for $\tilde{\mu}_i$:
+			Here we have again switched notation to $\vec{\varphi}_i = \vec{\varphi}_{t_i}$ for convenience. Solving for $\tilde{\mu}_i$:
 			\begin{spalign}
-				\tilde{\mu}_i & = \frac{1}{2} \left(\Phi_i K^{-1} \Phi_i^T\right)^{-1} \left( \Phi_i \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \varphi\right)
+				\tilde{\mu}_i & = \frac{1}{2} \left(\Phi K^{-1} \Phi^T\right)^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
 				\\
-				& = \frac{1}{2}{M^i}^{-1} \left( \Phi_i \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \varphi\right)
+				& = \frac{1}{2}{M^i}^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
 			\end{spalign}
 			And therefore
 			\begin{spalign}
-				\ai & = \left(\mathds{1} - K^{-1} \Phi_i^T{M^i}^{-1}\Phi_i \right)\vi +K^{-1} \Phi_i^T {M^i}^{-1} \varphi + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi_i^T {M^i}^{-1} \Phi_i \right)\wi 
+				\ai & = \left(\mathds{1} - K^{-1} \Phi^T{M^i}^{-1}\Phi \right)\vi +K^{-1} \Phi^T {M^i}^{-1} \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi^T {M^i}^{-1} \Phi \right)\wi 
 				\\
-				& = B^i \vi + C^i \varphi + (D^T \vl) \cdot \hat{e}_i B^i \wi
+				& = B^i \vi + C^i \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
 				\\
 				~
 				\\
-				& \text{where } C^i = K^{-1} \Phi_i^T{M^i}^{-1}
+				& \text{where } C^i = K^{-1} \Phi^T{M^i}^{-1}
 				\\
-				& \text{and } B^i =  \left(\mathds{1} - C^i \Phi_i \right)
+				& \text{and } B^i =  \left(\mathds{1} - C^i \Phi \right)
 			\end{spalign}
 
 			The prediction values are therefore:
@@ -425,7 +425,7 @@
 			\end{spalign}
 			We can then insert this back into the definition of $\ai$ to find:
 			\begin{spalign}
-				\ai = B^i \vi + C^i \vec{\varphi} + \left(D^T \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)\right)\cdot \hat{e}_i B^i \wi
+				\ai = B^i \vi + C^i \vec{\varphi}_i + \left(D^T \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)\right)\cdot \hat{e}_i B^i \wi
 			\end{spalign}
 			Where:
 			\begin{spalign}
@@ -433,11 +433,11 @@
 				\\
 				\wi & = K^{-1} \vec{X}
 				\\
-				M^i & = \Phi_i K^{_1} \Phi_i^T
+				M^i & = \Phi K^{_1} \Phi^T
 				\\
-				C^i & = K^{-1} \Phi_i^T M^{i,-1}
+				C^i & = K^{-1} \Phi^T M^{i,-1}
 				\\
-				B^i & = \mathds{1} - C^i \Phi_i
+				B^i & = \mathds{1} - C^i \Phi
 				\\
 				\alpha_i & = (B^i \vi + C^i \vec{\varphi}_i) \cdot \vec{X}
 				\\
