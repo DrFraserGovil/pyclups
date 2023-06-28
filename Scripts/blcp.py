@@ -17,8 +17,8 @@ kernelSigma = 3.5
 
 dataNoise = 0.1
 learningRate = 0.5
-learningMemory = 0.9
-learningMemory_SecondMoment = 0.999
+learningMemory = 0.7
+learningMemory_SecondMoment = 0.99
 
 def kernel(x,y):
 	#covariance the kernel
