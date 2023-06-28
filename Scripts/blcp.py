@@ -254,7 +254,7 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 def BLUP(predictX,dataT,dataX,order):
 	
 	#precompute some useful quantities
-	K=kernelMatrix(dataT) + (dataNoise/20)**2 * np.identity(len(dataT))
+	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) 
 	Kinv = np.linalg.inv(K)
 	Phi = np.zeros((order+1,len(dataT)))
 	for m in range(0,order+1):
@@ -277,12 +277,14 @@ def BLUP(predictX,dataT,dataX,order):
 		
 		for j in range(order+1):
 			phiVec[j] = phi(j,t)
+
+		
 		k = kernelVector(dataT,t)
 		
 
 
 		a = np.matmul(mat1,k) + np.matmul(np.matmul(Kinv,obj),phiVec)
-
+		
 		ps[i] = np.dot(a,dataX)
 		rms += (trueY[i] - ps[i])**2
 
@@ -292,7 +294,6 @@ def BLUP(predictX,dataT,dataX,order):
 
 def CLUP(predictX,dataT,dataX,order,steps):
 
-	gPredict = Prior(predictX)
 	trueY = Func(predictX)
 	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
@@ -309,6 +310,7 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
 	Minv = np.linalg.inv(M)
 	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
+	print(C)
 	Bmat = np.identity(n)-np.matmul(C,Phi)
 	alpha = np.zeros((len(predictX),1))
 	beta = np.zeros((len(predictX),1))
@@ -325,15 +327,13 @@ def CLUP(predictX,dataT,dataX,order,steps):
 		k=kernelVector(dataT,t)
 		ks.append(k)
 		vi = np.matmul(Kinv,k)
-		v.append(vi)
-		q[i] = np.dot(vi,dataX) + gPredict[i]
 		phiVec = np.zeros(order+1)
 		for j in range(order+1):
 			phiVec[j] = phi(j,t)
 		phis.append(phiVec)
 
-
 		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
+	
 		vecs.append(vec)
 		alpha[i] = np.dot(vec,dataX)
 		beta[i] = np.dot(np.matmul(Bmat,w),dataX)
@@ -346,7 +346,7 @@ def CLUP(predictX,dataT,dataX,order,steps):
 
 
 	mDim = len(predictX) -1
-	zs = np.random.uniform(-1,1,(mDim,1))
+	zs = np.random.uniform(1,1,(mDim,1))
 	cs = np.exp(zs)
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
@@ -390,11 +390,10 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	correct = np.matmul(H,cs-Dalpha)
 	# print(correct)
 	R = np.matmul(Bmat,w)
-	print(R)
 	for i in range(len(predictX)):
 
-		ai = vecs[i]+ correct[i] * R
-		# print(ai)
+		ai = vecs[i] + correct[i] * R
+		
 		ps[i] = np.dot(ai,dataX)
 		rms += (trueY[i] - ps[i])**2
 	# print(ps)
@@ -582,14 +581,16 @@ def blupTest():
 	# [blp,rms] = BLP(tt,priort,priorx)
 	# pt.plot(tt,blp,label="BLP_Prior, $\epsilon=$" + strRound(rms))
 	# [clp,rms,mse] = C_BLP(tt,priort,priorx,1000)
+
 	# pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
 
-	for order in range(4,5):
+	for order in range(-1,0):
 		[blup,rms] = BLUP(tt,t,x,order)
 		pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
 
-	for order in range(4,5):
-		[clup,rms] = CLUP(tt,t,x,order,5000)
+
+	for order in range(-1,0):
+		[clup,rms] = CLUP(tt,t,x,order,2000)
 		pt.plot(tt,clup,label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
 	pt.legend()
 	specialShow()
