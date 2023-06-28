@@ -410,22 +410,22 @@
 				& = \alpha_i + (D^T \vl) \cdot \hat{e}_i \beta_i
 			\end{spalign}
 			Where $\alpha_i$ and $\beta_i$ are generalisations of the $A_i$ and $B_i$ terms used in the CLP. We can then form a vector of $\vec{p}_i = P_i$, such that:
-			\begin{equation}
-				\vec{p} = \vec{\alpha} + \vec{\beta} \otimes D^T \vl
-			\end{equation}
-			Here $\otimes$ is the element-wise Hadamard product. Inserting this into the imposed constraints of \eref{E:CLUP_Constraint}, we find:
+			\begin{spalign}
+				\vec{p} & = \vec{\alpha} + \vec{\beta} \otimes D^T \vl
+				\\
+				& = \vec{\alpha} + \mathcal{B} D^T \vl
+			\end{spalign}
+			Here $\otimes$ is the element-wise Hadamard product, and $\mathcal{B} = \text{diag}(\vec{\beta})$. Inserting this into the imposed constraints of \eref{E:CLUP_Constraint}, we find:
 			\begin{spalign}
 				D \vec{p} & = \vec{c}
 				\\
-				D \vec{\alpha} + D  \left(\vec{\beta} \otimes\Big( D^T \vl\Big) \right) = \vec{c}
+				D \vec{\alpha} + D \mathcal{B} D^T \vl= \vec{c}
 				\\
-				\vec{\beta} \otimes\Big( D^T \vl\Big) & = (D^T D)^{-1} \left(D^T\vec{c} - D^TD \vec{\alpha} \right)
-				\\
-				D^T \vl & = \left[ (D^T D)^{-1} D^T\vec{c} - \vec{\alpha} \right] \oslash \vec{\beta}
+				\vl & = \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)
 			\end{spalign}
 			We can then insert this back into the definition of $\ai$ to find:
 			\begin{spalign}
-				\ai = B^i \vi + C^i \vec{\varphi} + \frac{\left((D^T D)^{-1} D^T\vec{c}\right)\cdot\hat{e}_i - \alpha_i }{\beta_i} B^i \wi
+				\ai = B^i \vi + C^i \vec{\varphi} + \left(D^T \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)\right)\cdot \hat{e}_i B^i \wi
 			\end{spalign}
 			Where:
 			\begin{spalign}
@@ -443,5 +443,6 @@
 				\\
 				\beta_i & = (B^i \wi) \cdot \vec{X}
 			\end{spalign}
+			\newpage
 	\section{Optimising the Kernel}
 \end{document}
