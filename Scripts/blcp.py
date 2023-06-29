@@ -15,7 +15,7 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 5
+dataNoise = 0.5
 learningRate = 0.1
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
@@ -24,7 +24,7 @@ def kernel(x,y):
 	#covariance the kernel
 	d = abs(x-y)/kernelSigma
 	# return dataNoise*dataNoise/(1+(d)**2)
-	return 20*(np.exp(-0.5 * d**2))
+	return 5*(np.exp(-0.5 * d**2))
 def kernelMatrix(sampleX):
 	#my attempt at computing K_ij, the covariance/ second moment matrix evaluated over the data
 	n = len(sampleX)
@@ -65,7 +65,7 @@ def BLP(predictT,dataT,dataX):
 	muData = Prior(dataT)#np.mean(dataX)
 	
 	#precompute some useful quantities
-	K=kernelMatrix(dataT) + (dataNoise/20)**2 * np.identity(len(dataT))
+	K=kernelMatrix(dataT) +  dataNoise*dataNoise* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	KinvX = np.matmul(Kinv,dataX-muData)
 
@@ -81,7 +81,6 @@ def BLP(predictT,dataT,dataX):
 		ps[i] = np.dot(KinvX,k) + mean[i] #normal BLP
 
 		rms += (trueY[i] - ps[i])**2
-		# print(predictX[i],ps[i],rms)
 	# ps += meanFunc(predictX)
 	rms = np.sqrt(rms/len(ps))
 	return [ps,rms]
@@ -105,12 +104,20 @@ def C_BLP(predictX,dataT,dataX,steps):
 		vi = np.matmul(Kinv,k)
 		v.append(vi)
 		q[i] = np.dot(vi,tData) + gPredict[i]
-
+	# return [q,0,0]
 	mDim = len(predictX) -1
 	# drange = np.ptp(dataX)/mDim
-	# print(drange)
 	zs = np.random.uniform(-6,-3,(mDim,1))
-	# print(zs)
+	prev = q[0]
+	for i in range(1,len(predictX)):
+		pred = q[i]
+		naivediff = pred - prev
+		if naivediff > 0:
+			zs[i-1] = np.log(naivediff)
+			prev = pred
+		else:
+			zs[i-1] = -4
+
 	cs = np.exp(zs)
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
@@ -148,12 +155,10 @@ def C_BLP(predictX,dataT,dataX,steps):
 			l = 20
 			if zs[j] > l:
 				zs[j] = l
-
+	cs = np.exp(zs)
 	bestRc = np.matmul(R,cs)
 	bestPredict = J + bestRc
 	bestEta =1.0/B * np.matmul(R, np.matmul(D,q) - cs)
-	# print(bestEta)
-	# print(np.shape(bestEta),len(v),len(predictX))
 	rms = 0
 	mse = 0
 	for i in range(len(bestPredict)):
@@ -164,11 +169,8 @@ def C_BLP(predictX,dataT,dataX,steps):
 		k=kernelVector(dataT,t)
 		contrib = np.matmul(bestA.transpose(),np.matmul(K,bestA)) - 2*np.matmul(bestA.transpose(),k)
 		mse += contrib
-		# print(contrib,mse)
 	mse/=len(trueY)
 	rms/=len(trueY)
-	# print(cs.transpose())
-	# print(bestPredict.transpose())
 	return [bestPredict,np.sqrt(rms),mse]
 def BLCP(predictX,dataT,dataX,steps,zs	):
 	# zs = np.zeros(len(predictX))
@@ -179,7 +181,7 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	gPredict = Prior(predictX)
 	tData = dataX - Prior(dataT)
 	#precompute values as before
-	K=kernelMatrix(dataT) + (dataNoise/2)**2 * np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	K=kernelMatrix(dataT) + (dataNoise)**2 * np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	mu = 0# np.mean(dataX)
 	w = np.matmul(Kinv,tData)
@@ -206,21 +208,13 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	#generate empty gradient vector
 	grad = np.zeros(len(zs))
 	for s in range(steps):
-		# print(s)
 		T = Transform(zs)
-		# if s == steps -1:
-		# 	print("final pos",T,"\n",zs)
 		for j in range(len(zs)):
 			dTdz_j = TransformDerivative(zs,j)
-			# print("grad",grad,"\n","pos",T)
-			# grad[j] += 2 * (T[j] - Q[j])
 			g = 0
 			for i in range(len(T)):
 				g += 2 * (T[i] - Q[i]) * dTdz_j[i]
-				# if s == steps -1:
-				# 	print("\t",j,(T[i] - Q[i]),dTdz_j[i],g)
 			grad[j] = g
-		# print("grad=",grad)
 		#ADAM step routine
 		ms = learningMemory * ms + (1.0 - learningMemory)*grad
 		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
@@ -241,13 +235,6 @@ def BLCP(predictX,dataT,dataX,steps,zs	):
 	
 
 	ps = Transform(zs) + mu
-	# for iT in range(0,len(predictX)):
-	# 	k = ks[iT]
-	# 	v = np.matmul(Kinv,k)
-	# 	ait = v + (ps[iT] - As[iT] - gPredict[iT])/(kdotw[iT])
-		
-	# 	print("At i=",iT,"MSE=",np.dot(ait,np.matmul(K,ait)) -2 *np.dot(ait,tData))
-	
 	rms = 0
 	for i in range(len(ps)):
 		rms += (trueY[i] - ps[i])**2
@@ -276,6 +263,7 @@ def BLUP(predictX,dataT,dataX,order):
 	phiVec = np.zeros(order+1)
 	trueY = Func(predictX)
 	rms = 0
+	
 	for i in range(len(predictX)):
 		t = predictX[i]
 		
@@ -374,15 +362,12 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	ms = np.zeros((len(zs),1))
 	vs = np.zeros((len(zs),1))
 	grad = np.zeros((len(zs),1))
-	# print(learningRate)
 	for s in range(steps):
-		# print(cs[0])
 		cs = np.exp(zs)
 
 		diff = np.matmul(H,cs-Dalpha)+ell
 		
 		grad = np.multiply(cs,np.matmul(Ht,diff))
-		# print(grad)
 		#ADAM step routine
 		ms = learningMemory * ms + (1.0 - learningMemory)*grad
 		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
@@ -398,11 +383,10 @@ def CLUP(predictX,dataT,dataX,order,steps):
 			l = 20
 			if zs[j] > l:
 				zs[j] = l
-
+	cs= np.exp(zs)
 	ps = np.zeros(len(predictX),)
 	rms=0
 	correct = np.matmul(H,cs-Dalpha)
-	# print(correct)
 	R = np.matmul(Bmat,w)
 	for i in range(len(predictX)):
 
@@ -410,7 +394,6 @@ def CLUP(predictX,dataT,dataX,order,steps):
 		
 		ps[i] = np.dot(ai,dataX)
 		rms += (trueY[i] - ps[i])**2
-	# print(ps)
 	rms = np.sqrt(rms/len(ps))
 	return [ps,rms]
 
@@ -423,7 +406,6 @@ if mode == 0:
 		out[0] = z[0]
 		for i in range(1,len(z)):
 			out[i]=out[i-1] + np.exp(z[i])
-		# print("hi")
 		return out
 
 	def TransformDerivative(z,i):
@@ -435,7 +417,8 @@ if mode == 0:
 		out[i:] = val
 		return out
 	def Func(t):
-		return 70.0/(1 + np.exp(-t)) +100
+		return 70.0/(1 + np.exp(-t)) +100 + 20.0/(1 + np.exp(-(t-5)*2)) 
+		# return t + np.sin(4*t)
 if mode == 1:
 	deltaT = 1
 	def Transform(z):
@@ -524,16 +507,13 @@ def optim():
 	axs[0].scatter(t,x,label="Data")
 
 	for i in tqdm(range(res)):
-		# print("Attempt i")
 		global kernelSigma
 		kernelSigma = sigmas[i]
 		[ps,rmsi,msei] = C_BLP(tt,t,x,500)
 		mse[i] = msei
 		rms[i] = rmsi
 		if i % int(res/6) == 0:
-			# print(i)
 			axs[0].plot(tt,ps,label="$\\theta=$"+strRound(kernelSigma))
-		# print(kernelSigma,msei,rmsi)
 	mse -= np.min(mse)-1e-2
 	mod = PriorModifiedMSE(sigmas,t,mse)
 	prior = PriorModifiedMSE(sigmas,t,mse-mse)
@@ -565,12 +545,12 @@ def optim():
 	specialShow()
 
 def blupTest():
-	ndat = 31
+	ndat = 30
 	global kernelSigma
-	kernelSigma = 2
+	kernelSigma = 1
 	[t,x] = GenerateData(ndat)
 	# c = np.mean(x)
-	tt = np.linspace(min(t),max(t),200)
+	tt = np.linspace(min(t),max(t),100)
 	res = 150
 	pt.plot(tt,Func(tt),"k:",label="True Function")	
 	pt.scatter(t,x,label="Data")
@@ -578,25 +558,34 @@ def blupTest():
 	
 	
 
-	# global m,c
-	# oldm = m
-	# oldc = c
-	# m=0
-	# c=0
-	# [blp,rms] = BLP(tt,t,x)
-	# pt.plot(tt,blp,label="BLP, $\epsilon=$" + strRound(rms))
-	# [clp,rms,mse] = C_BLP(tt,t,x,2000)
-	# pt.plot(tt,clp,label="CLP, $\epsilon=$" + strRound(rms))
+	global m,c
+	oldm = m
+	oldc = c
+	m=0
+	c=0
+	[blp,rms] = BLP(tt,t,x)
+	s, =pt.plot(tt,blp,'--',label="BLP, $\epsilon=$" + strRound(rms))
+	[clp,rms,mse] = C_BLP(tt,t,x,3000)
+	pt.plot(tt,clp,color=s.get_color(),label="CLP, $\epsilon=$" + strRound(rms))
 
-	# m=oldm
-	# c = oldc
-	# priort = t[1:-1]
-	# priorx = x[1:-1]
-	# [blp,rms] = BLP(tt,priort,priorx)
-	# pt.plot(tt,blp,label="BLP_Prior, $\epsilon=$" + strRound(rms))
-	# [clp,rms,mse] = C_BLP(tt,priort,priorx,1000)
+	c = np.mean(x)
+	[blp,rms] = BLP(tt,t,x)
+	s, =pt.plot(tt,blp,"--",label="BLP_Mean, $\epsilon=$" + strRound(rms))
+	[clp,rms,mse] = C_BLP(tt,t,x,3000)
+	# pt.plot(tt,Prior(tt),"r:",label="Prior")
 
-	# pt.plot(tt,clp,label="CLP_Prior, $\epsilon=$" + strRound(rms))
+	pt.plot(tt,clp,color=s.get_color(),label="CLP_Mean, $\epsilon=$" + strRound(rms))
+
+	m=oldm
+	c = oldc
+	priort = t[1:-1]
+	priorx = x[1:-1]
+	[blp,rms] = BLP(tt,priort,priorx)
+	s, =pt.plot(tt,blp,"--",label="BLP_LinearPrior, $\epsilon=$" + strRound(rms))
+	[clp,rms,mse] = C_BLP(tt,priort,priorx,3000)
+	# pt.plot(tt,Prior(tt),"r:",label="Prior")
+
+	pt.plot(tt,clp,color=s.get_color(),label="CLP_LinearPrior, $\epsilon=$" + strRound(rms))
 
 	# for order in range(0,1):
 	# 	[blup,rms] = BLUP(tt,t,x,order)
@@ -604,7 +593,7 @@ def blupTest():
 
 	cols =[u'b', u'g', u'r', u'c', u'm', u'y', u'k']
 	i = 0
-	for order in range(0,9,2):
+	for order in [1,3]:
 		[blup,rms] = BLUP(tt,t,x,order)
 		s, = pt.plot(tt,blup,'--',label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
 		[clup,rms] = CLUP(tt,t,x,order,1000)
@@ -612,6 +601,8 @@ def blupTest():
 		# [clup,rms] = CLUP(tt,t,x,order,100)
 		# pt.plot(tt,clup,label=str(order)+"-CLUP-low, $\epsilon=$" + strRound(rms))
 		i+=1
+	pt.xlabel("$t$")
+	pt.ylabel("$X_t$")
 	pt.legend()
 	specialShow()
 
