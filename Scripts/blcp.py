@@ -2,21 +2,17 @@
 
 
 import numpy as np
-import imageio
-import matplotlib.colors as colors
 from matplotlib import pyplot as pt
 from tqdm import tqdm
-# np.random.seed(0) #enable for reproducable randomness
 import warnings
-import time
 from scipy import special
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 0.5
-learningRate = 0.1
+dataNoise = 2
+learningRate = 0.05
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
 
@@ -24,7 +20,7 @@ def kernel(x,y):
 	#covariance the kernel
 	d = abs(x-y)/kernelSigma
 	# return dataNoise*dataNoise/(1+(d)**2)
-	return 5*(np.exp(-0.5 * d**2))
+	return 30*(np.exp(-0.5 * d**2))
 def kernelMatrix(sampleX):
 	#my attempt at computing K_ij, the covariance/ second moment matrix evaluated over the data
 	n = len(sampleX)
@@ -38,20 +34,7 @@ def kernelMatrix(sampleX):
 def phi(i,t):
 	p_monic = special.hermite(i, monic=True)
 	return p_monic(t)
-	return t**i
-	# if i == 0:
-	# 	return t-t+1
-	# if i == 1:
-	# 	return 2*t
-	# if i == 2:
-	# 	return 4*t**2 - 2
-	# if i == 3:
-	# 	return 8*t**3 - 12*t
-	# if i == 4:
-	# 	return 16*t**4 -48*t**2 + 12
-	# if i == 5:
-	# 	return 32*t**5 - 160*t**3 + 120*t 
-
+	
 def kernelVector(sampleX,t):
 	#my attempt at computing k_i, the covariance/ second moment vector evaluated over the data, at time t
 	n = len(sampleX)
@@ -60,7 +43,7 @@ def kernelVector(sampleX,t):
 		k[i] = kernel(sampleX[i],t)
 	return k
 def strRound(q):
-	return '%s' % float('%.3g' % q)
+	return '%s' % float('%.7g' % q)
 def BLP(predictT,dataT,dataX):
 	muData = Prior(dataT)#np.mean(dataX)
 	
@@ -388,14 +371,230 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	rms=0
 	correct = np.matmul(H,cs-Dalpha)
 	R = np.matmul(Bmat,w)
+	mse = 0
 	for i in range(len(predictX)):
 
 		ai = vecs[i] + correct[i] * R
-		
+		mse += np.dot(ai,K@ai) - 2 * np.dot(ai,ks[i])
 		ps[i] = np.dot(ai,dataX)
 		rms += (trueY[i] - ps[i])**2
 	rms = np.sqrt(rms/len(ps))
-	return [ps,rms]
+	return [ps,rms,mse]
+
+def CLUP_Boosted(predictX,dataT,dataX,order,steps):
+
+	trueY = Func(predictX)
+	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+	w = np.matmul(Kinv,dataX)
+	q = np.zeros((len(predictX),1))
+	n = len(dataX)
+	Phi = np.zeros((order+1,len(dataT)))
+	for m in range(0,order+1):
+		for j in range(len(dataT)):
+			Phi[m,j] = phi(m,dataT[j])
+	PhiT = Phi.transpose()
+	phis = []
+	v = []
+	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
+	Minv = np.linalg.inv(M)
+	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
+	Bmat = np.identity(n)-np.matmul(C,Phi)
+	alpha = np.zeros((len(predictX),1))
+	beta = np.zeros((len(predictX),1))
+	curlyB = np.zeros((len(beta),len(beta)))
+	ell = np.zeros((len(predictX),1))
+	vecs =[]
+	ks = []
+	ellBottom = np.dot(w,np.matmul(Bmat,np.matmul(K,np.matmul(Bmat,w))))
+	ellLeft = np.matmul(K,np.matmul(Bmat,w))
+	for i in range(len(predictX)):
+		# print(i)
+		t = predictX[i]
+		
+		k=kernelVector(dataT,t)
+		ks.append(k)
+		vi = np.matmul(Kinv,k)
+		v.append(vi)
+		phiVec = np.zeros(order+1)
+		for j in range(order+1):
+			phiVec[j] = phi(j,t)
+		phis.append(phiVec)
+
+		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
+		vecs.append(vec)
+		alpha[i] = np.dot(vec,dataX)
+		beta[i] = np.dot(np.matmul(Bmat,w),dataX)
+	
+		curlyB[i,i] = beta[i]
+
+		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
+		ell[i] = ellTop/ellBottom
+		
+
+
+	mDim = len(predictX) -1
+
+	
+	# zs = np.random.uniform(-5,-2,(mDim,1))
+	# prev = np.dot(vecs[0],dataX)
+	# for i in range(1,len(predictX)):
+	# 	pred = np.dot(vecs[i],dataX)
+	# 	naivediff = pred - prev
+	# 	if naivediff > 0:
+	# 		zs[i-1] = np.log(naivediff)
+	# 		prev = pred
+	# 	else:
+	# 		zs[i-1] = -4
+
+	
+	D = np.zeros((mDim,mDim+1))
+	for i in range(mDim):
+		D[i,i] = -1
+		D[i,i+1] = 1
+	ps = alpha
+	updateCs = D @ps	
+	updateCs[updateCs<0] = 0
+	zs = np.log(updateCs+1e-6)
+	cs = np.exp(zs)
+
+
+	DBDTinv = np.linalg.inv(np.matmul(D,np.matmul(curlyB,D.transpose())))
+	Dalpha = np.matmul(D,alpha)
+	H = np.matmul(D.transpose(),DBDTinv)
+	Ht = H.transpose()
+	ms = np.zeros((len(zs),1))
+	vs = np.zeros((len(zs),1))
+	grad = np.zeros((len(zs),1))
+	for s in range(steps):
+		cs = np.exp(zs)
+
+		diff = np.matmul(H,cs-Dalpha)+ell
+		
+		grad = np.multiply(cs,np.matmul(Ht,diff))
+		#ADAM step routine
+		ms = learningMemory * ms + (1.0 - learningMemory)*grad
+		vs = learningMemory_SecondMoment * vs + (1.0 - learningMemory_SecondMoment)*np.multiply(grad,grad)
+		c1 = 1.0 - learningMemory**(s+1)
+		c2 = 1.0 - learningMemory_SecondMoment**(s+1)
+		eps = 1e-8
+		zs -= learningRate * np.divide(ms/c1,np.sqrt(eps + vs/c2))
+		#prevents the prediction from 'dying' by going too negative
+		for j in range(1,len(zs)):
+			m = -10
+			if zs[j] < m:
+				zs[j] = m
+			l = 20
+			if zs[j] > l:
+				zs[j] = l
+	cs= np.exp(zs)
+	ps = np.zeros(len(predictX),)
+	rms=0
+	correct = np.matmul(H,cs-Dalpha)
+	R = np.matmul(Bmat,w)
+	mse = 0
+	for i in range(len(predictX)):
+
+		ai = vecs[i] + correct[i] * R
+		mse += np.dot(ai,K@ai) - 2 * np.dot(ai,ks[i])
+		ps[i] = np.dot(ai,dataX)
+		rms += (trueY[i] - ps[i])**2
+	rms = np.sqrt(rms/len(ps))
+	return [ps,rms,mse]
+
+
+def CLUP_Iter(predictX,dataT,dataX,order,steps):
+	trueY = Func(predictX)
+	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+	w = np.matmul(Kinv,dataX)
+	q = np.zeros((len(predictX),1))
+	n = len(dataX)
+	Phi = np.zeros((order+1,len(dataT)))
+	for m in range(0,order+1):
+		for j in range(len(dataT)):
+			Phi[m,j] = phi(m,dataT[j])
+	PhiT = Phi.transpose()
+	phis = []
+	v = []
+	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
+	Minv = np.linalg.inv(M)
+	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
+	Bmat = np.identity(n)-np.matmul(C,Phi)
+	alpha = np.zeros((len(predictX),1))
+	beta = np.zeros((len(predictX),1))
+	curlyB = np.zeros((len(beta),len(beta)))
+	ell = np.zeros((len(predictX),1))
+	vecs =[]
+	ks = []
+	ellBottom = np.dot(w,np.matmul(Bmat,np.matmul(K,np.matmul(Bmat,w))))
+	ellLeft = np.matmul(K,np.matmul(Bmat,w))
+	for i in range(len(predictX)):
+		# print(i)
+		t = predictX[i]
+		
+		k=kernelVector(dataT,t)
+		ks.append(k)
+		vi = np.matmul(Kinv,k)
+		v.append(vi)
+		phiVec = np.zeros(order+1)
+		for j in range(order+1):
+			phiVec[j] = phi(j,t)
+		phis.append(phiVec)
+
+		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
+		vecs.append(vec)
+		alpha[i] = np.dot(vec,dataX)
+		beta[i] = np.dot(np.matmul(Bmat,w),dataX)
+	
+		curlyB[i,i] = beta[i]
+
+		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
+		ell[i] = ellTop/ellBottom
+
+	
+	mDim = len(predictX) -1
+	D = np.zeros((mDim,mDim+1))
+	for i in range(mDim):
+		D[i,i] = -1
+		D[i,i+1] = 1
+
+	BD = curlyB @ D.transpose()
+	DBDTinv = np.linalg.inv(np.matmul(D,np.matmul(curlyB,D.transpose())))
+	Dalpha = np.matmul(D,alpha)
+	Dt = D.transpose()
+	H = np.matmul(D.transpose(),DBDTinv)
+	Ht = H.transpose()
+	
+	ps = alpha
+	print(ps)
+	cs = np.zeros((mDim,1))
+	# lambdaVec = np.matmul(DBDTinv, (cs - Dalpha))
+	# print(lambdaVec)
+	for i in range(steps):
+
+		
+		updateCs = D @ps
+		
+		updateCs[updateCs<0] = 0
+		# aPrime = alpha + curlyB @ Dt @ (cs-updateCs)
+		lambdaVec = DBDTinv @ (updateCs - D @ alpha)
+		ps = alpha + BD @ lambdaVec
+		cs = updateCs
+	rms=0
+	correct = np.matmul(H,cs-Dalpha)
+	R = np.matmul(Bmat,w)
+	mse = 0
+	for i in range(len(predictX)):
+
+		ai = vecs[i] + correct[i] * R
+		mse += np.dot(ai,K@ai) - 2 * np.dot(ai,ks[i])
+
+
+		# ps[i] = np.dot(ai,dataX)
+		rms += (trueY[i] - ps[i])**2
+	rms = np.sqrt(rms/len(ps))
+	return [ps,rms,mse]
 
 mode = 0
 
@@ -480,7 +679,7 @@ def PriorModifiedMSE(ell,ts,MSE):
 
 def GenerateData(nData):
 	scatter = 0.3
-	t = np.linspace(xMin,xMax,nData) + scatter * np.random.normal(0,1,nData,)
+	t = np.linspace(xMin,xMax,nData) + scatter * np.random.normal(0,3,nData,)
 	# t = np.random.uniform(xMin,xMax,nData)
 	t = np.sort(t)
 	x = Func(t) + np.random.normal(0,dataNoise,nData,)
@@ -544,10 +743,35 @@ def optim():
 	axs[0].legend()
 	specialShow()
 
-def blupTest():
-	ndat = 30
+def iterTest():
+	ndat = 10
 	global kernelSigma
-	kernelSigma = 1
+	kernelSigma = 2.5
+	[t,x] = GenerateData(ndat)
+	# c = np.mean(x)
+	tt = np.linspace(min(t),max(t),100)
+	res = 150
+	pt.plot(tt,Func(tt),"k:",label="True Function")	
+	pt.scatter(t,x,label="Data")
+
+	order = 3
+	
+	[clup,rms] = BLUP(tt,t,x,order)
+	s,=pt.plot(tt,clup,'--',label=str(order)+"-BLUP")
+	
+	for iter in [10,100,1000]:
+		[clup,rms,mse] = CLUP(tt,t,x,order,iter)
+		s,=pt.plot(tt,clup,'--',label=str(order)+"-CLUP-" + str(iter) +", $\mu=$" + strRound(mse))
+
+		[clup,rms,mse] = CLUP_Boosted(tt,t,x,order,iter)
+		pt.plot(tt,clup,color=s.get_color(),label=str(order)+"-CLUP_Boost-" + str(iter) +", $\mu=$" + strRound(mse))
+
+	pt.legend()
+	specialShow()
+def blupTest():
+	ndat = 10
+	global kernelSigma
+	kernelSigma = 0.1
 	[t,x] = GenerateData(ndat)
 	# c = np.mean(x)
 	tt = np.linspace(min(t),max(t),100)
@@ -568,46 +792,46 @@ def blupTest():
 	[clp,rms,mse] = C_BLP(tt,t,x,3000)
 	pt.plot(tt,clp,color=s.get_color(),label="CLP, $\epsilon=$" + strRound(rms))
 
-	c = np.mean(x)
-	[blp,rms] = BLP(tt,t,x)
-	s, =pt.plot(tt,blp,"--",label="BLP_Mean, $\epsilon=$" + strRound(rms))
-	[clp,rms,mse] = C_BLP(tt,t,x,3000)
-	# pt.plot(tt,Prior(tt),"r:",label="Prior")
+	# c = np.mean(x)
+	# [blp,rms] = BLP(tt,t,x)
+	# s, =pt.plot(tt,blp,"--",label="BLP_Mean, $\epsilon=$" + strRound(rms))
+	# [clp,rms,mse] = C_BLP(tt,t,x,3000)
+	# # pt.plot(tt,Prior(tt),"r:",label="Prior")
 
-	pt.plot(tt,clp,color=s.get_color(),label="CLP_Mean, $\epsilon=$" + strRound(rms))
+	# pt.plot(tt,clp,color=s.get_color(),label="CLP_Mean, $\epsilon=$" + strRound(rms))
 
-	m=oldm
-	c = oldc
-	priort = t[1:-1]
-	priorx = x[1:-1]
-	[blp,rms] = BLP(tt,priort,priorx)
-	s, =pt.plot(tt,blp,"--",label="BLP_LinearPrior, $\epsilon=$" + strRound(rms))
-	[clp,rms,mse] = C_BLP(tt,priort,priorx,3000)
-	# pt.plot(tt,Prior(tt),"r:",label="Prior")
+	# m=oldm
+	# c = oldc
+	# priort = t[1:-1]
+	# priorx = x[1:-1]
+	# [blp,rms] = BLP(tt,priort,priorx)
+	# s, =pt.plot(tt,blp,"--",label="BLP_LinearPrior, $\epsilon=$" + strRound(rms))
+	# [clp,rms,mse] = C_BLP(tt,priort,priorx,3000)
+	# # pt.plot(tt,Prior(tt),"r:",label="Prior")
 
-	pt.plot(tt,clp,color=s.get_color(),label="CLP_LinearPrior, $\epsilon=$" + strRound(rms))
+	# pt.plot(tt,clp,color=s.get_color(),label="CLP_LinearPrior, $\epsilon=$" + strRound(rms))
 
-	# for order in range(0,1):
+	# # for order in range(0,1):
+	# # 	[blup,rms] = BLUP(tt,t,x,order)
+	# # 	pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
+
+	# cols =[u'b', u'g', u'r', u'c', u'm', u'y', u'k']
+	# i = 0
+	# for order in [1,3]:
 	# 	[blup,rms] = BLUP(tt,t,x,order)
-	# 	pt.plot(tt,blup,label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
-
-	cols =[u'b', u'g', u'r', u'c', u'm', u'y', u'k']
-	i = 0
-	for order in [1,3]:
-		[blup,rms] = BLUP(tt,t,x,order)
-		s, = pt.plot(tt,blup,'--',label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
-		[clup,rms] = CLUP(tt,t,x,order,1000)
-		pt.plot(tt,clup,color=s.get_color(),label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
-		# [clup,rms] = CLUP(tt,t,x,order,100)
-		# pt.plot(tt,clup,label=str(order)+"-CLUP-low, $\epsilon=$" + strRound(rms))
-		i+=1
+	# 	s, = pt.plot(tt,blup,'--',label=str(order)+"-BLUP, $\epsilon=$" + strRound(rms))
+	# 	[clup,rms,a] = CLUP(tt,t,x,order,1000)
+	# 	pt.plot(tt,clup,color=s.get_color(),label=str(order)+"-CLUP, $\epsilon=$" + strRound(rms))
+	# 	# [clup,rms] = CLUP(tt,t,x,order,100)
+	# 	# pt.plot(tt,clup,label=str(order)+"-CLUP-low, $\epsilon=$" + strRound(rms))
+	# 	i+=1
 	pt.xlabel("$t$")
 	pt.ylabel("$X_t$")
 	pt.legend()
 	specialShow()
 
 
-# np.random.seed(1)
+np.random.seed(1)
 blupTest()
-
+# iterTest()
 # optim()
