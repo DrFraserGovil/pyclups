@@ -511,7 +511,7 @@
 
 		To our generated dataset, we fitted the following models:
 		\begin{itemize}
-			\item \textbf{BLP}: A standard BLP using the simple $\vec{X} \cdot K^{-1} \vec{k}$ predictor. We did not perform a mean-scaling on this predictor
+			\item \textbf{BLP}: A standard BLP using the simple $\vec{X} \cdot K^{-1} \vec{k}$ predictor. We did not perform a mean-scaling on this predictor: $g(t) = 0$.
 			\item \textbf{CLP}: As with the BLP, but with the addition of the monotonic constraint (see \eref{E:CLP_Monotone})
 			\item \textbf{BLP\_Mean}/\textbf{CLP\_Mean}: As above, but the prior is set to $g(t) = \frac{1}{N} \mathds{1} \cdot \vec{X}$, i.e. the sample mean.
 			\item  \textbf{BLP\_LinearPrior}/\textbf{CLP\_LinearPrior}: The prior is set to $g(t) = mt + c$, the straight line joining the two extreme datapoints in the sample. To avoid bootstrapping, these datapoints are then removed from the training dataset, so the fit is performed on $N-2$ datapoints.
@@ -541,4 +541,37 @@
 			\caption{\it As with \ref{F:CLUP}, but with $N=520$ datapoints ($N=518$ for the `Prior' models)}\label{F:CLUP3}
 		\end{figure}
 	\section{Optimising the Kernel}
+
+
+
+	% \section{Random Musing: Demarginalisation}
+	% 	(Comment this out after writing!)
+
+	% 	The effort which led me down this road was an effort to demarginalise (in a constrained fashion), a function from a Poisson distribution:
+
+
+	% 	\begin{equation}
+	% 		p(k|f) = \int_0^\infty f(\lambda) P(k|\lambda) \d \lambda
+	% 	\end{equation}
+	% 	Where $P(k|\lambda)$ is the usual Poisson mass function and $f(\lambda)$ is a function to be determined. The question is if the tools of the CLP can be applied to this same problem -- the difficulty is increased due to the presence of the integral. 
+		
+	% 	In the actual solution, we require that $f$ is both normalised and positive -- however I will attempt a simple BLP-style inference first, to see if this seems possible.
+
+	% 	We suppose that $f(\lambda)$ can be written as a linear predictor in terms of the observed set of probabilities, $\vec{p}$:
+	% 	\def\al{\vec{a}_\lambda}
+	% 	\begin{equation}
+	% 		f(\lambda) = \al \cdot \vec{p}
+	% 	\end{equation}
+	% 	Then the predictor of the probabilities is:
+	% 	\begin{equation}
+	% 		\hat{p}_k = \vec{p} \cdot \int_0^\infty P(k|\lambda) \al \d \lambda 
+	% 	\end{equation}
+	% 	We set up our Lagrangian:
+	% 	\begin{spalign}
+	% 		\mathcal{L} & = \sum_k \E{(p_k - \hat{p}_k)^2}
+	% 		\\
+	% 		& = \sum_k \E{p_k^2} - 2 \E{p_k \hat{p}_k} + \E{\hat{p}_k^2}
+	% 		\\
+	% 		& = \sum_k \E{p_k^2} - 2 \left(\E{p_k \vec{p}} \int_0^\infty P(k|\lambda)\a\ \d \lambda \right) + \E{\hat{p}_k^2}
+	% 	\end{spalign}
 \end{document}

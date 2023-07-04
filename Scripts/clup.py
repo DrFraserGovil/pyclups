@@ -9,8 +9,8 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 3.5
 
-dataNoise = 2
-kernelNoise = 5
+dataNoise = 5
+kernelNoise = dataNoise*10
 learningRate = 0.05
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
@@ -309,7 +309,8 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	return Predictor(predictX,ps,rms,mse)
 
 def Func(t):
-	return 70.0/(1 + np.exp(-t)) +100 + 20.0/(1 + np.exp(-(t-5)*2)) 
+	return 70.0/(1 + np.exp(-t)) +100 + 40.0/(1 + np.exp(-(t-5)*2)) 
+	# return t + (t+10)**2 - (t/3.142)**4
 
 def GenerateData(nData):
 	#synthesises a sample from Func()
@@ -326,17 +327,16 @@ c = Func(xMin) -xMin *m
 
 
 def blupTest():
-	ndat = 10
+	ndat = 20
 	global kernelSigma
-	kernelSigma = 3
+	kernelSigma = 1
 	[t,x] = GenerateData(ndat)
-	tt = np.linspace(min(t),max(t),1000)
+	tt = np.linspace(min(t),max(t),300)
 	pt.plot(tt,Func(tt),"k:",label="True Function")	
 	pt.scatter(t,x,label="Data")
 	
 	global m,c
-	oldm = m
-	oldc = c
+
 	m=0
 	c=0
 	blp = BLP(tt,t,x)
@@ -345,14 +345,13 @@ def blupTest():
 	pt.plot(clp.T,clp.X,color=s.get_color(),label="CLP, $\epsilon=$" + strRound(clp.RMS))
 
 	c = np.mean(x)
-	print(c)
 	blp = BLP(tt,t,x)
 	s, =pt.plot(blp.T,blp.X,'--',label="BLP_Mean, $\epsilon=$" + strRound(blp.RMS))
 	clp = CLP(tt,t,x,3000)
 	pt.plot(clp.T,clp.X,color=s.get_color(),label="CLP_Mean, $\epsilon=$" + strRound(clp.RMS))
 
-	m=oldm
-	c = oldc
+	m=(x[-1] - x[0])/(t[-1]- t[0])
+	c = x[0] - m* t[0]
 	priort = t[1:-1]
 	priorx = x[1:-1]
 	blp = BLP(tt,t,x)
@@ -360,7 +359,7 @@ def blupTest():
 	clp = CLP(tt,t,x,3000)
 	pt.plot(clp.T,clp.X,color=s.get_color(),label="CLP_LinearPrior, $\epsilon=$" + strRound(clp.RMS))
 
-	for order in [1,3]:
+	for order in [1,3,8]:
 		blup = BLUP(tt,t,x,order)
 		s, = pt.plot(blup.T,blup.X,'--',label=str(order)+"-BLUP, $\epsilon=$" + strRound(blup.RMS))
 		clup = CLUP(tt,t,x,order,1000)
@@ -370,5 +369,5 @@ def blupTest():
 	pt.ylabel("$X_t$")
 	pt.legend()
 	specialShow()
-np.random.seed(1)
+# np.random.seed(0)
 blupTest()
