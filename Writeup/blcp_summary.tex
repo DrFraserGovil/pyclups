@@ -391,67 +391,65 @@
 			\begin{spalign}
 				\ai & = \left(\mathds{1} - K^{-1} \Phi^T{M}^{-1}\Phi \right)\vi +K^{-1} \Phi^T {M}^{-1} \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi^T {M}^{-1} \Phi \right)\wi 
 				\\
-				& = B^i \vi + C \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
+				& = B \vi + C \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
 				\\
 				~
 				\\
 				& \text{where } C = K^{-1} \Phi^T{M}^{-1}
 				\\
-				& \text{and } B^i =  \left(\mathds{1} - C \Phi \right)
+				& \text{and } B =  \left(\mathds{1} - C \Phi \right)
 			\end{spalign}
 
 			The prediction values are therefore:
 			\begin{spalign}
 				\hat{X}_i = P_i & = \ai \cdot \vec{X}
 				\\
-				& = (B^i{\vi} + C \vec{\varphi}_i)\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot B^i K^{-1} \vec{X}
+				& = (B{\vi} + C \vec{\varphi}_i)\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot B K^{-1} \vec{X}
 				\\
-				& = \alpha_i + (D^T \vl) \cdot \hat{e}_i \beta_i
+				& = \alpha_i + (D^T \vl) \cdot \hat{e}_i \beta
 			\end{spalign}
 			Where $\alpha_i$ and $\beta_i$ are generalisations of the $A_i$ and $B_i$ terms used in the CLP. We can then form a vector of $\vec{p}_i = P_i$, such that:
 			\begin{spalign}
-				\vec{p} & = \vec{\alpha} + \vec{\beta} \otimes D^T \vl
-				\\
-				& = \vec{\alpha} + \mathcal{B} D^T \vl
+				\vec{p} & = \vec{\alpha} + \beta D^T \vl
 			\end{spalign}
-			Here $\otimes$ is the element-wise Hadamard product, and $\mathcal{B} = \text{diag}(\vec{\beta})$. Inserting this into the imposed constraints of \eref{E:CLUP_Constraint}, we find:
+			Inserting this into the imposed constraints of \eref{E:CLUP_Constraint}, we find:
 			\begin{spalign}
 				D \vec{p} & = \vec{c}
 				\\
-				D \vec{\alpha} + D \mathcal{B} D^T \vl= \vec{c}
+				D \vec{\alpha} + \beta D D^T \vl= \vec{c}
 				\\
-				\vl & = \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)
+				\vl & = \frac{1}{\beta}\left(D D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)
 			\end{spalign}
 
 		\subsection{The CLUP}
 			We can then insert this back into the definition of $\ai$ to find:
 			\begin{spalign}
-				\ai = B^i \vi + C \vec{\varphi}_i + \left(D^T \left(D \mathcal{B} D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)\right)\cdot \hat{e}_i B^i \wi
+				\ai^\text{clup} &= B \vi + C \vec{\varphi}_i + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{blup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}
+				\\
+				& = \ai^\text{blup} + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{clup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}
 			\end{spalign}
 			Where:
 			\begin{spalign}
-				\vi & = K^{-1} \vec{k}_i
+				C & = K^{-1} \Phi^T  (\Phi K^{-1} \Phi^T)^{-1}
 				\\
-				\wi & = K^{-1} \vec{X}
+				B & = \mathds{1} - C \Phi
 				\\
-				M & = \Phi K^{-1} \Phi^T
+				\beta & = \vec{X} \cdot B K^{-1} \vec{X}
 				\\
-				C & = K^{-1} \Phi^T M^{i,-1}
+				\ai^\text{blp} & = K^{-1} \vec{k}_i
 				\\
-				B^i & = \mathds{1} - C \Phi
+				\ai^\text{blup} & = B \ai^\text{blp} + C\vec{\varphi}_i
 				\\
-				\alpha_i & = (B^i \vi + C \vec{\varphi}_i) \cdot \vec{X}
-				\\
-				\beta_i & = (B^i \wi) \cdot \vec{X}
+				[A^\text{blup}]_{ij} & = [\ai^\text{blup}]_j
 			\end{spalign}
 
-			We reformulate our Lagrangian in terms of $\vec{c}$ in order to allow us to optimise w.r.t. to inexact constraints. For convenience, we write the matrix product as $H = D^T(D \mathcal{B} D^T)^{-1}$. After much algebra, it becomes clear that we can write the Lagrangian in the following form:
+			We reformulate our Lagrangian in terms of $\vec{c}$ in order to allow us to optimise w.r.t. to inexact constraints. For convenience, we write the matrix product as $H = \frac{1}{\beta}D^T(D D^T)^{-1}$. After much algebra, it becomes clear that we can write the Lagrangian in the following form:
 			\begin{spalign}
 				\mathcal{L}^\prime = \text{constant in $\vec{c}$ } + \left(H\vec{c} - H D \vec{\alpha} + \vec{\ell}\right)^2
 			\end{spalign}
 			Where:
 			\begin{spalign}
-				\ell_i = \frac{\wi^T B^i K\left(B^i \vi + C \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}}{\vec{w}^T B^i K B^i \vec{w}}
+				\ell_i & =  \beta\left( {\ai^\text{blup}\cdot \left(KBK^{-1}\right)\vec{X} - \vec{k}_i \cdot B K^{-1} \vec{X}}\right)
 			\end{spalign}
 			
 			% \begin{spalign}
@@ -471,25 +469,19 @@
 			% \end{spalign}
 			As a result, we may write the derivative of the Lagrangian w.r.t. one of the constraint parameters ($\vec{z}_i$) as:
 			\begin{spalign}
-				\pdiv{\mathcal{L}^\prime}{z_m} = \left(H(c(\vec{z}) - D\vec{\alpha}) + \vec{\ell} \right) \cdot H \pdiv{\vec{c}}{z_m}
+				\pdiv{\mathcal{L}^\prime}{z_m} & = H^T \left(H(c(\vec{z}) - D\vec{\alpha}) + \vec{\ell} \right) \cdot  \pdiv{\vec{c}}{z_m}
+				\\
+				& = \left( (DD^T)^{-1} \left[ \vec{c}(\vec{z}) + D\left(\vec{\ell} - \vec{\alpha} \right)\right] \right) \cdot \pdiv{\vec{c}}{z_m}
 			\end{spalign}
 			In the case where $c_m = f(z_m)$, i.e. each constraint is associated uniquely with a single parameter, this simplifies to:
 			\begin{spalign}
-				\pdiv{\mathcal{L}^\prime}{\vec{z}} & = \left(H^T H \left(\vec{c}(\vec{z}) - D\vec{\alpha}\right) + H^T \vec{\ell} \right) \otimes \vec{\Delta}(\vec{z})
+				\pdiv{\mathcal{L}^\prime}{\vec{z}} & = \left( (DD^T)^{-1} \left[ \vec{c}(\vec{z}) + D\left(\vec{\ell} - \vec{\alpha} \right)\right] \right) \otimes \vec{\Delta}(\vec{z})
 				\\
 				~
 				\\
 				[\vec{\Delta}(\vec{z})]_i & = \left.\pdiv{c_i}{z_i} \right|_{\vec{z}}
 			\end{spalign}
 			This has the advantage of reducing the number of operations needed to compute the derivative - from $m^2$ to $m$. 
-			
-			We note that in the case where $\text{dim}(\Phi) = 0$ (i.e. the case where we do not allow any approximation to the mean function), then $C = 0$, $B^i = \mathds{1}, \alpha_i \to A_i$, and so:
-			\begin{spalign}
-				\ell_i &= \frac{\wi \cdot K K^{-1} \vec{k}_i - \vec{k}_i \cdot \wi}{\vec{X} K^{-1} \vec{X}}
-				\\
-				& = 0
-			\end{spalign}
-			We see that we have recovered the CLP solution, in the case where $g(t) = 0$ -- exactly as we might naively expect.
 			
 	\subsection{The CL(U)P in Action}
 
@@ -543,35 +535,4 @@
 	\section{Optimising the Kernel}
 
 
-
-	% \section{Random Musing: Demarginalisation}
-	% 	(Comment this out after writing!)
-
-	% 	The effort which led me down this road was an effort to demarginalise (in a constrained fashion), a function from a Poisson distribution:
-
-
-	% 	\begin{equation}
-	% 		p(k|f) = \int_0^\infty f(\lambda) P(k|\lambda) \d \lambda
-	% 	\end{equation}
-	% 	Where $P(k|\lambda)$ is the usual Poisson mass function and $f(\lambda)$ is a function to be determined. The question is if the tools of the CLP can be applied to this same problem -- the difficulty is increased due to the presence of the integral. 
-		
-	% 	In the actual solution, we require that $f$ is both normalised and positive -- however I will attempt a simple BLP-style inference first, to see if this seems possible.
-
-	% 	We suppose that $f(\lambda)$ can be written as a linear predictor in terms of the observed set of probabilities, $\vec{p}$:
-	% 	\def\al{\vec{a}_\lambda}
-	% 	\begin{equation}
-	% 		f(\lambda) = \al \cdot \vec{p}
-	% 	\end{equation}
-	% 	Then the predictor of the probabilities is:
-	% 	\begin{equation}
-	% 		\hat{p}_k = \vec{p} \cdot \int_0^\infty P(k|\lambda) \al \d \lambda 
-	% 	\end{equation}
-	% 	We set up our Lagrangian:
-	% 	\begin{spalign}
-	% 		\mathcal{L} & = \sum_k \E{(p_k - \hat{p}_k)^2}
-	% 		\\
-	% 		& = \sum_k \E{p_k^2} - 2 \E{p_k \hat{p}_k} + \E{\hat{p}_k^2}
-	% 		\\
-	% 		& = \sum_k \E{p_k^2} - 2 \left(\E{p_k \vec{p}} \int_0^\infty P(k|\lambda)\a\ \d \lambda \right) + \E{\hat{p}_k^2}
-	% 	\end{spalign}
 \end{document}
