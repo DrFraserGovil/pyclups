@@ -361,225 +361,185 @@
 			\begin{split}
 			\pdiv{\mathcal{L}}{\ai} & = 2 K \ai - 2 \vec{k}_i + \Phi^T \tilde{\mu} +   \pdiv{\vec{p}}{\ai}(D^T\lambda)
 			\\
-			& = 2 K \ai - 2  \vec{k}_i + \Phi^T \tilde{\mu} + Q_i(\vec{X}) D^T\vec{\lambda}
+			& = 2 K \ai - 2  \vec{k}_i + \Phi^T \tilde{\mu} + \left( D^T\vec{\lambda} \cdot \hat{e}_i \right) \vec{X}
 			\end{split}
 			\\\label{E:CLUP_Constraint}
 			\pdiv{\mathcal{L}}{\vec{\lambda}} & =\vec{c} - D\vec{p}
 			\\
 			\pdiv{\mathcal{L}}{\tilde{\mu}} & = \Phi_t \a - \vec{\varphi}_t \label{E:CLUP_Unbiased}
 		\end{align}
-		Where $Q_i(\vec{X})\vec{v} = \vec{v} \cdot \hat{e}_i \vec{X}$, and equivalently $Q_i^T \vec{v} = \vec{v} \cdot \vec{X} \hat{e}_i$, where $\hat{e}_i$ is the $i^\text{th}$ basis vector, such that $\vec{\lambda} \cdot \hat{e}_i = \lambda_i$, the $i^\text{th}$ Lagrange Multiplier \footnote{We note that we are having something of a collision with vectors associated with the $i^\text{th}$ predictor (such as $\ai$) and scalars associated with predictors or constraints which we have `stacked' into vectors - such as $\lambda_i$ and $P_i$. When indexing into labelled vectors we will attempt to make this clear - i.e. $[\ai]_j$ is the $j^\text{th}$ element of the vector associated with predictor $i$}.	The optimal value of $\a$ is therefore at:
+		Where $\hat{e}_i$ is the $i^\text{th}$ basis vector, such that $\vec{\lambda} \cdot \hat{e}_i = \lambda_i$, the $i^\text{th}$ Lagrange Multiplier \footnote{We note that we are having something of a collision with vectors associated with the $i^\text{th}$ predictor (such as $\ai$) and scalars associated with predictors or constraints which we have `stacked' into vectors - such as $\lambda_i$ and $P_i$. When indexing into labelled vectors we will attempt to make this clear - i.e. $[\ai]_j$ is the $j^\text{th}$ element of the vector associated with predictor $i$}.	The optimal value of $\a$ is therefore at:
 		\def\vl{\vec{\lambda}}
+		\def\ki{\vec{k}_i}
+		\def\Kinv{K^{-1}}
+		\def\X{\vec{X}}
 		\begin{spalign}
-			\ai & = K^{-1} \vec{k}_i - 2 K^{-1} \Phi^T \tilde{\mu}_i + K^{-1} Q_i D^T \vec{\lambda}
-			\\
-			& = \vi - 2 K^{-1}\Phi^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \wi \label{E:CLUP_a}
+			\ai & = K^{-1} \vec{k}_i - 2 K^{-1} \Phi^T \tilde{\mu}_i +  \left( D^T\vec{\lambda} \cdot \hat{e}_i \right)K^{-1} \vec{X}\label{E:CLUP_a}
 		\end{spalign}
 
 		\subsection{Applying Constraints}
 			We now impose the unbiased constraint - substituting \eref{E:CLUP_a} into \eref{E:CLUP_Unbiased}, which gives us:
 			\begin{spalign}
-				\Phi \vi - 2 \Phi K^{-1} \Phi^T \tilde{\mu}_i + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi = \vec{\varphi}_i
+				\Phi \Kinv\ki - 2 \Phi K^{-1} \Phi^T \tilde{\mu}_i + \left[(D^T \vl) \cdot \hat{e}_i\right] \Phi \Kinv \X= \vec{\varphi}_i
 			\end{spalign}
 			Here we have again switched notation to $\vec{\varphi}_i = \vec{\varphi}_{t_i}$ for convenience. Solving for $\tilde{\mu}_i$:
 			\begin{spalign}
-				\tilde{\mu}_i & = \frac{1}{2} \left(\Phi K^{-1} \Phi^T\right)^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
-				\\
-				& = \frac{1}{2}{M}^{-1} \left( \Phi \vi + (D^T \vl) \cdot \hat{e}_i \Phi_t \wi - \vec{\varphi}_i\right)
+				\tilde{\mu}_i & = \frac{1}{2} \left(\Phi K^{-1} \Phi^T\right)^{-1} \left( \Phi \Kinv\ki + \left[ (D^T \vl) \cdot \hat{e}_i\right] \Phi \Kinv \X - \vec{\varphi}_i\right)
 			\end{spalign}
-			And therefore
+			Writing $M = \left(\Phi K^{-1} \Phi^T\right)$, we therefore have:
 			\begin{spalign}
-				\ai & = \left(\mathds{1} - K^{-1} \Phi^T{M}^{-1}\Phi \right)\vi +K^{-1} \Phi^T {M}^{-1} \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i \left(\mathds{1} - K^{-1} \Phi^T {M}^{-1} \Phi \right)\wi 
-				\\
-				& = B \vi + C \vec{\varphi}_i + (D^T \vl) \cdot \hat{e}_i B^i \wi
+				\ai & = K^{-1} \Delta \ki + C \vec{\varphi}_i + \left[(D^T \vl) \cdot \hat{e}_i \right] \Kinv \Delta \X
 				\\
 				~
 				\\
 				& \text{where } C = K^{-1} \Phi^T{M}^{-1}
 				\\
-				& \text{and } B =  \left(\mathds{1} - C \Phi \right)
+				& \text{and } \Delta =  \mathds{1} - \Phi^T M^{-1} \Phi K^{-1}
+				\\
+				&~~~~~~~~~~ = \left(\mathds{1} - C \Phi \right)^T
 			\end{spalign}
+
+			We note that $\Delta$ has the following property:
+			\begin{equation}
+				K^{-1} \Delta = \Delta^T K^{-1}
+			\end{equation}
+			We also note that:
+			\begin{spalign}
+				\ai^\text{clup} & = K^{-1} \Delta \ki + C \vec{\varphi}_i + \left[(D^T \vl) \cdot \hat{e}_i \right] \Kinv \Delta \X
+				\\
+				& = \ai^\text{blup}+ \left[(D^T \vl) \cdot \hat{e}_i \right] \Kinv \Delta \X
+			\end{spalign}
+			I.e., we have found that (perhaps unsurprisingly) $\ai^\text{clup}$ is equal to the BLUP case, plus a correction factor which ensures that the constraints are obeyed.
 
 			The prediction values are therefore:
 			\begin{spalign}
 				\hat{X}_i = P_i & = \ai \cdot \vec{X}
 				\\
-				& = (B{\vi} + C \vec{\varphi}_i)\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot B K^{-1} \vec{X}
+				& = \ai^\text{blup}\cdot \vec{X} + (D^T \vl) \cdot \hat{e}_i \vec{X} \cdot K^{-1} \Delta \vec{X}
 				\\
-				& = \alpha_i + (D^T \vl) \cdot \hat{e}_i \beta
+				& = p_i^\text{blup} + (D^T \vl) \cdot \hat{e}_i \beta
 			\end{spalign}
-			Where $\alpha_i$ and $\beta_i$ are generalisations of the $A_i$ and $B_i$ terms used in the CLP. We can then form a vector of $\vec{p}_i = P_i$, such that:
+			Where:
 			\begin{spalign}
-				\vec{p} & = \vec{\alpha} + \beta D^T \vl
+				p_i^\text{blup} & = \left(  K^{-1} \Delta \ki + C \vec{\varphi}_i \right) \cdot \X
+				\\
+				\beta & = \vec{X} \cdot K^{-1} \Delta \vec{X}
 			\end{spalign}
+			We can then form a vector of $\vec{p}_i = P_i$, such that:
+			\begin{spalign}
+				\vec{p}^\text{clup} & = \vec{p}^\text{blup} + \beta D^T \vl
+			\end{spalign}
+			
 			Inserting this into the imposed constraints of \eref{E:CLUP_Constraint}, we find:
 			\begin{spalign}
 				D \vec{p} & = \vec{c}
 				\\
-				D \vec{\alpha} + \beta D D^T \vl= \vec{c}
+				D  \vec{p}^\text{blup} + \beta D D^T \vl= \vec{c}
 				\\
-				\vl & = \frac{1}{\beta}\left(D D^T \right)^{-1} \left(\vec{c} - D \vec{\alpha}\right)
+				\vl & = \frac{1}{\beta}\left(D D^T \right)^{-1} \left(\vec{c} - D  \vec{p}^\text{blup}\right)
 			\end{spalign}
 
 		\subsection{The CLUP}
 			We can then insert this back into the definition of $\ai$ to find:
 			\begin{spalign}
-				\ai^\text{clup} &= B \vi + C \vec{\varphi}_i + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{blup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}
-				\\
-				& = \ai^\text{blup} + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{clup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}\label{E:BLUP_A}
+				\ai^\text{clup} &= \ai^\text{blup} + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D \vec{p}^\text{blup}\right)\right)\cdot \hat{e}_i}{\beta} K^{-1} \Delta\vec{X}\label{E:BLUP_A}
 			\end{spalign}
 			Where:
 			\begin{spalign}
 				C & = K^{-1} \Phi^T  (\Phi K^{-1} \Phi^T)^{-1}
 				\\
-				B & = \mathds{1} - C \Phi
+				\Delta & = \mathds{1} - \Phi^T  (\Phi K^{-1} \Phi^T)^{-1} \Phi K^{-1}
 				\\
-				\beta & = \vec{X} \cdot B K^{-1} \vec{X}
+				\beta & = \vec{X} \cdot K^{-1} \Delta \vec{X}
 				\\
 				\ai^\text{blp} & = K^{-1} \vec{k}_i
 				\\
-				\ai^\text{blup} & = B \ai^\text{blp} + C\vec{\varphi}_i
+				\ai^\text{blup} & = \Delta^T \ai^\text{blp} + C\vec{\varphi}_i
 				\\
-				[A^\text{blup}]_{ij} & = [\ai^\text{blup}]_j
+				p_i^\text{blup} & = \ai^\text{blup} \cdot \X
 			\end{spalign}
+			From this it is clear to see how the CLUP, the BLUP, the CLUP and the BLP all map onto each other. In the case where we have no constraints, then $\vec{lambda} = 0$, and $\ai^\text{clup} = \ai^\text{blup}$, and in the case where we do not perform any simultaneous fitting, $C = 0$ and $\Delta = \mathds{1}$, so $\ai^\text{blup} = \ai^\text{blp}$.
 
-			We reformulate our Lagrangian in terms of $\vec{c}$ in order to allow us to optimise w.r.t. to inexact constraints. For convenience, we write the matrix product as $H = \frac{1}{\beta}D^T(D D^T)^{-1}$. After much algebra, it becomes clear that we can write the Lagrangian in the following form:
+			
+		\subsection{Optimising the CLUP}
+			
+			However, as before with the CLP, we have a problem if some of our constraints were inexact - that is, $\vec{c} = \vec{c}(\vec{z})$. We reiterate that this arises because, in our formalism, and inequality takes the following form:
+			\begin{equation}
+				\text{Constraint $i$: } a \geq b \LLR a - b = \underbrace{e^z}_{c_i}
+			\end{equation}
+			In the case where it is unknown \textit{how much bigger} $a$ is than $b$, we must find the value of $c_i$ which minimises the Lagrangian. In short, we have formulated a way to write $\ai$ as an exact-constraint-obeying function of some unknown parameters $\vec{z}$ -- we must now optimise with respect to these parameters. 
+
+			Therefore:
 			\begin{spalign}
-				\mathcal{L}^\prime = \text{constant in $\vec{c}$ } + \left(H\vec{c} - H D \vec{\alpha} + \vec{\ell}\right)^2
+				\pdiv{\mathcal{L}}{z_k} & = \sum_{i} \pdiv{\mathcal{L}}{\ai} \cdot \pdiv{\ai}{z_k}
+				\\
+				& =  \sum_{i} \pdiv{\mathcal{L}}{\ai} \cdot \left(\pdiv{\ai}{\vec{c}} \pdiv{\vec{c}}{z_k}\right)
+				\\
+				& = 2  \sum_{i} \left( K \ai - \ki \right) \cdot \left(\pdiv{\ai}{\vec{c}} \pdiv{\vec{c}}{z_k}\right)
+			\end{spalign}
+			In order to compute $\pdiv{\ai}{\vec{c}}$ it is convenient to use outer products to write it in the following form:
+			\begin{equation}
+				\ai = \ai^\text{blup} + \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) \left(D^T (DD^T)^{-1} (\vec{c} - D \vec{\alpha})\right)
+			\end{equation}
+			Hence:
+			\begin{equation}
+				\pdiv{\ai}{\vec{c}} = \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right)D^T (DD^T)^{-1}
+			\end{equation}
+			Recalling that $(\vec{u} \otimes \vec{w})^T = \vec{w} \otimes \vec{u}$, therefore we have:
+			\begin{spalign}
+				\pdiv{\mathcal{L}}{z_k} & =2  \sum_{i} \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i\right)\left( K \ai - \ki \right) \cdot D^T (DD^T)^{-1}\pdiv{\vec{c}}{z_k}
+			\end{spalign}
+			Exploiting the inner product once again:
+			\begin{spalign}
+				\pdiv{\mathcal{L}}{z_k} & =2  \left(\sum_{i} \Delta^T \left[ (\ai - K^{-1} \ki ) \cdot \vec{\X} \right] \hat{e}_i \right)\cdot D^T (DD^T)^{-1}\pdiv{\vec{c}}{z_k}
+			\end{spalign}
+			Recall that:
+			\begin{spalign}
+				\Delta^T \ai  & = (1 - C \Phi) \ai
+				\\
+				& = \ai - C \vec{\varphi}_i
+			\end{spalign}
+			This follows from the fact that $\ai$ must obey the unbiasedness constraint. Expanding the definition of $\ai$ and $\ai^\text{blup}$:
+			\begin{spalign}
+				\Delta^T \ai  & = \left(\ai^\text{blup} + \frac{s_i}{\beta} K^{-1} \Delta \X \right) - C \vec{\varphi}_i
+				\\
+				& = \left(\Delta^T K^{-1} \ki + C \vec{\varphi}_i+ \frac{s_i}{\beta} K^{-1} \Delta \X \right) - C \vec{\varphi}_i
+				\\
+				& = \Delta^T K^{-1} \ki + \frac{s_i}{\beta} K^{-1} \Delta \X
 			\end{spalign}
 			Where:
+			\begin{equation}
+				\vec{s} = \left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D \vec{p}^\text{blup}\right)\right) \LLR s_i = \vec{s} \cdot \hat{e}_i
+			\end{equation}
+			Therefore:
 			\begin{spalign}
-				\ell_i & =  \beta\left( {\ai^\text{blup}\cdot \left(KBK^{-1}\right)\vec{X} - \vec{k}_i \cdot B K^{-1} \vec{X}}\right)
-			\end{spalign}
-			
-			% \begin{spalign}
-			% 	\vec{k}_i \cdot \ai & = \vec{k}_i \cdot \left(B^i \vi + C \vec{\varphi}_i \right) + \left(H\vec{c} - H D \vec{\alpha} \right)\cdot \hat{e}_i \vec{k} \cdot B^i \vec{w}
-			% 	\\
-			% 	\ai \cdot K \ai &  = \left(B^i \vi + C \vec{\varphi}_i \right) \cdot K \left(B^i \vi + C \vec{\varphi}_i \right) 
-			% 	\\
-			% 	& ~~+ 2\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i ~ \times \wi^T B^i K\left(B^i \vi + C \vec{\varphi}_i \right)
-			% 	\\
-			% 	& ~~ + \left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right)^2 \vec{w}^T B^i K B^i \vec{w}
-			% \end{spalign}
-			% Therefore:
-			% \begin{spalign}
-			% 	\ai \cdot K \ai - 2\ai \cdot{\vec{k}} & =\left(\vec{w}^T B^i K B^i \vec{w}\right) \left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right)^2 
-			% 	\\
-			% 	& + 2\left(\left(H\vec{c} - H D \vec{\alpha} \right) \cdot \hat{e}_i\right) \left(\wi^T B^i K\left(B^i \vi + C \vec{\varphi}_i \right) - \vec{k} \cdot B^i \vec{w}\right)
-			% \end{spalign}
-			As a result, we may write the derivative of the Lagrangian w.r.t. one of the constraint parameters ($\vec{z}_i$) as:
-			\begin{spalign}
-				\pdiv{\mathcal{L}^\prime}{z_m} & = H^T \left(H(c(\vec{z}) - D\vec{\alpha}) + \vec{\ell} \right) \cdot  \pdiv{\vec{c}}{z_m}
+				\vec{X} \cdot \left(\Delta^T \ai - \Delta^T K^{-1} \ki \right) & = \vec{X} \cdot \left( \Delta^T K^{-1} \ki + \frac{s_i}{\beta} K^{-1} \Delta \X - \Delta^T K^{-1} \ki \right)
 				\\
-				& = \left( (DD^T)^{-1} \left[ \vec{c}(\vec{z}) + D\left(\vec{\ell} - \vec{\alpha} \right)\right] \right) \cdot \pdiv{\vec{c}}{z_m}
-			\end{spalign}
-			In the case where $c_m = f(z_m)$, i.e. each constraint is associated uniquely with a single parameter, this simplifies to:
-			\begin{spalign}
-				\pdiv{\mathcal{L}^\prime}{\vec{z}} & = \left( (DD^T)^{-1} \left[ \vec{c}(\vec{z}) + D\left(\vec{\ell} - \vec{\alpha} \right)\right] \right) \otimes \vec{\Delta}(\vec{z})
+				& = \frac{s_i}{\beta} \vec{X} \cdot K^{-1} \Delta \vec{X}
 				\\
-				~
-				\\
-				[\vec{\Delta}(\vec{z})]_i & = \left.\pdiv{c_i}{z_i} \right|_{\vec{z}}
+				& = s_i
 			\end{spalign}
-			This has the advantage of reducing the number of operations needed to compute the derivative - from $m^2$ to $m$. 
-			
-			% We note that in the case where $\text{dim}(\Phi) = 0$ (i.e. the case where we do not allow any approximation to the mean function), then $C = 0$, $B^i = \mathds{1}, \alpha_i \to A_i$, and so:
-			% \begin{spalign}
-			% 	\ell_i \to 0 
-			% \end{spalign}
-			% We see that we have recovered the CLP solution, in the case where $g(t) = 0$ -- exactly as we might naively expect.
-	
-			
-	\subsection{Deriving (Again)}
+			Therefore:
+			\begin{equation}
+				\pdiv{\mathcal{L}}{z_k} =2 \left[(DD^T)^{-1} \left(\vec{c} - D \vec{p}^\text{blup}\right) \right] \cdot \pdiv{\vec{c}}{z_k}
+			\end{equation}
+			In the case where $c_k = c_k(z_k)$, i.e. each constraint is associated with only one parameter, this simplifies to:
+			\begin{equation}
+				\pdiv{\mathcal{L}}{\vec{z}} =2 \left[(DD^T)^{-1} \left(\vec{c} - D \vec{p}^\text{blup}\right) \right] \odot \vec{\delta}(\vec{c}) \label{E:CLUP_GRAD}
+			\end{equation}
+			Where $\odot$ is the elementwise Hadamard product and:
+			\begin{equation}
+				[\vec{\delta}(\vec{c})]_i = \pdiv{c_i}{z_i}
+			\end{equation}
+			For example, in the case where $\vec{c} = e^{z_i}$, we find that $\vec{\delta} = \vec{c}$.
 		
-		We started having some trouble making inferences about the correct convergence of some of the terms in the previous formalism, so I will attempt to derive the optimisation routine through a different route, in the hope that it makes the algebra somewhat clearer. 
+			\subsubsection{Sanity Check: Recovering the BLUP}
 
-		We begin with the formulation of \eref{E:BLUP_A}, with some notational changes:
-		\begin{spalign}
-			\ai^\text{clup} & = K^{-1} \Delta \vec{k}_i + C \vec{\varphi}_i + \frac{\left(D^T (DD^T)^{-1} (\vec{c} - D \vec{\alpha})\right)\cdot \hat{e}_i}{\beta} K^{-1} \Delta \vec{X}
-			\\
-			& = \ai^\text{blup} + s_i K^{-1} \Delta \vec{X}
-		\end{spalign}
-		The matrix $\Delta$ is the `residual' matrix, such that:
-		\begin{spalign}
-			\Delta & = 1 - \Phi^T (\Phi K^{-1} \Phi^T)^{-1} \Phi K^{-1}
-			\\
-			s_i & = \frac{1}{\beta}\left(D^T (DD^T)^{-1} (\vec{c} - D \vec{\alpha})\right)\cdot \hat{e}_i
-		\end{spalign}
-		Note that this is equal to $B^T$ in the previous attempt (and in general $K^{-1} \Delta = \Delta^T K^{-1}$) - however $\Delta$ has the interpretation of being the `residual' operator - it subtracts away the polynomial fit provided by $\Phi$, so $K^{-1} \Delta \vec{k}_i$ is the 
+				We have already seen that the CLUP is a constrained version of the BLUP, so it should be trivially obvious that when the BLUP meets the constraints, then the CLUP coincides with the BLUP. 
 
-		The properties of the outer product are such that:
-		\begin{spalign}
-			\left(\vec{u} \otimes \vec{v}\right) \vec{w} & = (\vec{v} \cdot \vec{w}) \vec{u}
-			\\
-			\left(\vec{u} \otimes \vec{v}\right)^T & = \left(\vec{v} \otimes \vec{u}\right)
-		\end{spalign}
-		Therefore we can write (using $H = D^T (DD^T)^{-1}$)
-		\begin{spalign}
-			\left(H (\vec{c} - D \vec{\alpha})\right)\cdot \hat{e}_iK^{-1} \Delta \vec{X} & = \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) \left(H (\vec{c} - D \vec{\alpha})\right)
-		\end{spalign}
-		So:
-		\begin{spalign}
-			\ai^\text{clup} & = \ai^\text{blup} + \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) \left(H (\vec{c} - D \vec{\alpha})\right)
-		\end{spalign}
-		This has the corollary that:
-		\begin{spalign}
-			\pdiv{\ai^\text{clup}}{\vec{c}} = \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) H
-		\end{spalign}
-		In order to find the optimal value of $\vec{c}$ we need to optimise the Lagrangrian w.r.t the parameters of $\vec{c}$, so:
-		\begin{spalign}
-			\pdiv{\mathcal{L}}{z_k} & = \sum_i \pdiv{\mathcal{L}}{\ai} \cdot \pdiv{\ai}{z_k}
-			\\
-			& = \sum_i \pdiv{\mathcal{L}}{\ai} \cdot \pdiv{\ai}{\vec{c}} \pdiv{\vec{c}}{z_k}
-			\\
-			& = \sum_i 2\left( K \ai - \vec{k}_i \right) \cdot   \left[ (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right]  \left(H \pdiv{\vec{c}}{z_k} \right)
-			\\
-			& = \sum_i 2 \left[ (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right]^T \left( K \ai - \vec{k}_i \right) \cdot    \left(H \pdiv{\vec{c}}{z_k} \right)
-		\end{spalign}
-		We can now continue to exploit the properties of the inner products to simply this equation:
-		\begin{spalign}
-			\pdiv{\mathcal{L}}{z_k}& = \sum_i 2 \left[\hat{e}_i  \otimes  (K^{-1} \Delta \vec{X}) \right] \left( K \ai - \vec{k}_i \right) \cdot    \left(H \pdiv{\vec{c}}{z_k} \right)
-			\\
-			& = 2 \sum_i \left( \left[K^{-1} \Delta \vec{X} \cdot K \ai \right] \hat{e}_i - \left[K^{-1} \Delta \vec{X} \cdot \vec{k}_i \right] \hat{e}_i \right) \cdot \left(H \pdiv{\vec{c}}{z_k} \right)
-			\\
-			& = 2 \left[\sum_i \left( \vec{\delta} \cdot \ai - \vec{\delta} \cdot  \ai^{blp} \right) \hat{e}_i \right] \cdot H \pdiv{\vec{c}}{z_k}
-		\end{spalign}
-		Where $\vec{\delta} = \Delta \vec{X}$. 
+				However, as a validation of our method, we note that the condition that the BLUP meets the constraints is exactly $D \vec{p}^\text{blup} = \vec{c}$, at which point \eref{E:CLUP_GRAD} is trivially zero, since the left hand side of the dot product is the zero vector -- hence the BLUP is an extremum of our Lagrangian in the case where it meets the constraints. 
 
-		\subsubsection{Sanity Check: Recovering the BLUP}
-
-			We should wish to note that in the case where the BLUP obeys the constraints, the CLUP $\to$ BLUP. When this is the case, we have $D \vec{\alpha} = \vec{c}$, where $\alpha_i = \ai^{blup} \cdot \vec{X}$, and so:
-			\begin{spalign}
-				\ai^\text{clup} & = \ai^\text{blup} + \vec{0}
-				\\
-				& = K^{-1} \Delta \vec{k}_i + C \vec{\varphi}_i 
-			\end{spalign}
-			We also recall that, by definition of the BLUP and the CLUP, $\Phi \ai^\text{blup} = \Phi \ai^\text{clup} = \varphi_i$, hence - Rearranging:
-			\begin{spalign}
-				\delta \cdot \ai^\text{clup} & = \delta \cdot \ai^\text{blup}
-				\\
-				& = \vec{X} \cdot \Delta^T \ai^\text{blup}
-				\\
-				& = \vec{X} \cdot (1 - C \Phi) \ai^\text{blup}
-				\\
-				& = \vec{X} \cdot (\ai^\text{blup} - C \vec{\varphi}_i )
-				\\
-				& = \vec{X} \cdot (K^{-1} \Delta \vec{k}_i)
-				\\
-				& = \delta \cdot K^{-1} \vec{k}_i
-				\\
-				& = \delta \cdot \ai^\text{blp}
-			\end{spalign}
-			Therefore, when the BLUP obeys the constraints, we find that:
-			\begin{spalign}
-				\left.\pdiv{\mathcal{L}}{z_k} \right|_{BLUP}& = 2 \left[\sum_i \left( \vec{\delta} \cdot \ai^{BLUP} - \vec{\delta} \cdot  \ai^{blp} \right) \hat{e}_i \right] \cdot H \pdiv{\vec{c}}{z_k}
-				\\
-				& =  2 \left[\sum_i \left(\vec{\delta} \cdot  \ai^{blp}  - \vec{\delta} \cdot  \ai^{blp} \right) \hat{e}_i \right] \cdot H \pdiv{\vec{c}}{z_k}
-				\\
-				& = 0
-			\end{spalign}
-			Therefore, when the BLUP obeys the constraints, it is a solution to the CLUP.
-
+				
 	\subsection{The CL(U)P in Action}
 
 		\begin{figure}[t]

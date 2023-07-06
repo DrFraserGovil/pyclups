@@ -260,7 +260,7 @@ def CLUP(predictX,dataT,dataX,order,steps):
 
 		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
 		ell[i] = ellTop/ellBottom
-		
+	print("ell = ",ell.transpose())
 	mDim = len(predictX) -1	
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
@@ -498,7 +498,7 @@ def blupTest():
 	global kernelSigma
 	kernelSigma = 1
 	[t,x] = GenerateData(ndat)
-	tt = np.linspace(min(t),max(t),300)
+	tt = np.linspace(min(t),max(t),50)
 	pt.plot(tt,Func(tt),"k:",label="True Function")	
 	pt.scatter(t,x,label="Data")
 	
@@ -590,5 +590,5 @@ def evenTest():
 	specialShow()
 
 np.random.seed(2)
-# blupTest()
-evenTest()
+blupTest()
+# evenTest()
