@@ -426,7 +426,7 @@
 			\begin{spalign}
 				\ai^\text{clup} &= B \vi + C \vec{\varphi}_i + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{blup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}
 				\\
-				& = \ai^\text{blup} + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{clup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}
+				& = \ai^\text{blup} + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c} - D A^\text{clup}\vec{X}\right)\right)\cdot \hat{e}_i}{\beta} B K^{-1} \vec{X}\label{E:BLUP_A}
 			\end{spalign}
 			Where:
 			\begin{spalign}
@@ -483,6 +483,67 @@
 			\end{spalign}
 			This has the advantage of reducing the number of operations needed to compute the derivative - from $m^2$ to $m$. 
 			
+			% We note that in the case where $\text{dim}(\Phi) = 0$ (i.e. the case where we do not allow any approximation to the mean function), then $C = 0$, $B^i = \mathds{1}, \alpha_i \to A_i$, and so:
+			% \begin{spalign}
+			% 	\ell_i \to 0 
+			% \end{spalign}
+			% We see that we have recovered the CLP solution, in the case where $g(t) = 0$ -- exactly as we might naively expect.
+	
+			
+	\subsection{Deriving (Again)}
+		
+		We started having some trouble making inferences about the correct convergence of some of the terms in the previous formalism, so I will attempt to derive the optimisation routine through a different route, in the hope that it makes the algebra somewhat clearer. 
+
+		We begin with the formulation of \eref{E:BLUP_A}, with some notational changes:
+		\begin{spalign}
+			\ai^\text{clup} & = K^{-1} \Delta \vec{k}_i + C \vec{\varphi}_i + \frac{\left(D^T (DD^T)^{-1} (\vec{c} - D \vec{\alpha})\right)\cdot \hat{e}_i}{\beta} K^{-1} \Delta \vec{X}
+			\\
+			& = \ai^\text{blup} + s_i K^{-1} \Delta \vec{X}
+		\end{spalign}
+		The matrix $\Delta$ is the `residual' matrix, such that:
+		\begin{spalign}
+			\Delta & = 1 - \Phi^T (\Phi K^{-1} \Phi^T)^{-1} \Phi K^{-1}
+			\\
+			s_i & = \frac{1}{\beta}\left(D^T (DD^T)^{-1} (\vec{c} - D \vec{\alpha})\right)\cdot \hat{e}_i
+		\end{spalign}
+		Note that this is equal to $B^T$ in the previous attempt (and in general $K^{-1} \Delta = \Delta^T K^{-1}$) - however $\Delta$ has the interpretation of being the `residual' operator - it subtracts away the polynomial fit provided by $\Phi$, so $K^{-1} \Delta \vec{k}_i$ is the 
+
+		The properties of the outer product are such that:
+		\begin{spalign}
+			\left(\vec{u} \otimes \vec{v}\right) \vec{w} & = (\vec{v} \cdot \vec{w}) \vec{u}
+			\\
+			\left(\vec{u} \otimes \vec{v}\right)^T & = \left(\vec{v} \otimes \vec{u}\right)
+		\end{spalign}
+		Therefore we can write (using $H = D^T (DD^T)^{-1}$)
+		\begin{spalign}
+			\left(H (\vec{c} - D \vec{\alpha})\right)\cdot \hat{e}_iK^{-1} \Delta \vec{X} & = \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) \left(H (\vec{c} - D \vec{\alpha})\right)
+		\end{spalign}
+		So:
+		\begin{spalign}
+			\ai^\text{clup} & = \ai^\text{blup} + \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) \left(H (\vec{c} - D \vec{\alpha})\right)
+		\end{spalign}
+		This has the corollary that:
+		\begin{spalign}
+			\pdiv{\ai^\text{clup}}{\vec{c}} = \left( (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right) H
+		\end{spalign}
+		In order to find the optimal value of $\vec{c}$ we need to optimise the Lagrangrian w.r.t the parameters of $\vec{c}$, so:
+		\begin{spalign}
+			\pdiv{\mathcal{L}}{z_k} & = \sum_i \pdiv{\mathcal{L}}{\ai} \cdot \pdiv{\ai}{z_k}
+			\\
+			& = \sum_i \pdiv{\mathcal{L}}{\ai} \cdot \pdiv{\ai}{\vec{c}} \pdiv{\vec{c}}{z_k}
+			\\
+			& = \sum_i 2\left( K \ai - \vec{k}_i \right) \cdot   \left[ (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right]  \left(H \pdiv{\vec{c}}{z_k} \right)
+			\\
+			& = \sum_i 2 \left[ (K^{-1} \Delta \vec{X}) \otimes \hat{e}_i \right]^T \left( K \ai - \vec{k}_i \right) \cdot    \left(H \pdiv{\vec{c}}{z_k} \right)
+		\end{spalign}
+		We can now continue to exploit the properties of the inner products to simply this equation:
+		\begin{spalign}
+			\pdiv{\mathcal{L}}{z_k}& = \sum_i 2 \left[\hat{e}_i  \otimes  (K^{-1} \Delta \vec{X}) \right] \left( K \ai - \vec{k}_i \right) \cdot    \left(H \pdiv{\vec{c}}{z_k} \right)
+			\\
+			& = 2 \sum_i \left( \left[K^{-1} \Delta \vec{X} \cdot K \ai \right] \hat{e}_i - \left[K^{-1} \Delta \vec{X} \cdot \vec{k}_i \right] \hat{e}_i \right) \cdot \left(H \pdiv{\vec{c}}{z_k} \right)
+			\\
+			& = 2 \left(  \Delta\vec{X} \cdot \left( \ai - K^{-1} \vec{k}_i \right) \right) \cdot \left(H \pdiv{\vec{c}}{z_k} \right)
+		\end{spalign}
 	\subsection{The CL(U)P in Action}
 
 		\begin{figure}[t]

@@ -7,9 +7,9 @@ from scipy import special
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
-kernelSigma = 3.5
+kernelSigma = 0.35
 
-dataNoise = 5
+dataNoise = 0.7
 kernelNoise = dataNoise*10
 learningRate = 0.05
 learningMemory = 0.7
@@ -71,7 +71,7 @@ def BLP(predictT,dataT,dataX):
 	
 	#precompute some useful quantities
 	muData = Prior(dataT)
-	K=kernelMatrix(dataT) +  dataNoise*dataNoise* np.identity(len(dataT))
+	K=kernelMatrix(dataT)
 	Kinv = np.linalg.inv(K)
 
 	#loop over the prediction points, and compute the prediction at each one
@@ -97,7 +97,7 @@ def BLUP(predictX,dataT,dataX,order):
 	#computes the BLUP using phi as a basis, up to the polynomial of order 'order'
 
 	#precompute some useful quantities
-	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) 
+	K=kernelMatrix(dataT)
 	Kinv = np.linalg.inv(K)
 	Phi = np.zeros((order+1,len(dataT))) #basis matrix at each of the sample points
 	for m in range(0,order+1):
@@ -137,7 +137,7 @@ def CLP(predictX,dataT,dataX,steps):
 	gPredict = Prior(predictX)
 	trueY = Func(predictX)
 	tData = dataX - Prior(dataT)
-	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	K=kernelMatrix(dataT) #softening *kernel(0,0)* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	w = np.matmul(Kinv,tData)
 	B = np.dot(w,tData)
@@ -216,7 +216,7 @@ def CLP(predictX,dataT,dataX,steps):
 def CLUP(predictX,dataT,dataX,order,steps):
 
 	trueY = Func(predictX)
-	K=kernelMatrix(dataT) +  dataNoise*dataNoise*np.identity(len(dataT)) #softening *kernel(0,0)* np.identity(len(dataT))
+	K=kernelMatrix(dataT) #softening *kernel(0,0)* np.identity(len(dataT))
 	Kinv = np.linalg.inv(K)
 	w = np.matmul(Kinv,dataX)
 	n = len(dataX)
@@ -308,15 +308,182 @@ def CLUP(predictX,dataT,dataX,order,steps):
 	rms = np.sqrt(rms/len(ps))
 	return Predictor(predictX,ps,rms,mse)
 
+def even_CLUP(predictX,dataT,dataX,order,steps):
+
+	trueY = Func(predictX)
+	K=kernelMatrix(dataT) #softening *kernel(0,0)* np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+	w = np.matmul(Kinv,dataX)
+	n = len(dataX)
+	Phi = np.zeros((order+1,len(dataT)))
+	for m in range(0,order+1):
+		for j in range(len(dataT)):
+			Phi[m,j] = phi(m,dataT[j])
+	PhiT = Phi.transpose()
+	phis = []
+	v = []
+	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
+	Minv = np.linalg.inv(M)
+	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
+	Bmat = np.identity(n)-np.matmul(C,Phi)
+	alpha = np.zeros((len(predictX),1))
+	ell = np.zeros((len(predictX),1))
+	vecs =[]
+	ks = []
+	ellBottom = np.dot(w,np.matmul(Bmat,np.matmul(K,np.matmul(Bmat,w))))
+	ellLeft = np.matmul(K,np.matmul(Bmat,w))
+	beta = np.dot(np.matmul(Bmat,w),dataX)
+	for i in range(len(predictX)):
+		t = predictX[i]
+		
+		k=kernelVector(dataT,t)
+		ks.append(k)
+		vi = np.matmul(Kinv,k)
+		v.append(vi)
+		phiVec = np.zeros(order+1)
+		for j in range(order+1):
+			phiVec[j] = phi(j,t)
+		phis.append(phiVec)
+
+		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
+		vecs.append(vec)
+		alpha[i] = np.dot(vec,dataX)
+		
+	
+
+		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
+		ell[i] = ellTop/ellBottom
+		
+	mDim = int((len(predictX) -1	)/2)
+	print(mDim)
+	D = np.zeros((mDim,len(predictX)))
+	for i in range(mDim):
+		D[i,i] = -1
+		offset = len(predictX)-1
+		D[i,offset-i] = 1
+
+	cs = np.zeros((mDim,1))
+	ps = alpha
+
+	DDTinv = np.linalg.inv(np.matmul(D,D.transpose()))
+	Dalpha = np.matmul(D,alpha)
+	H = np.matmul(D.transpose(),DDTinv)
+	Ht = H.transpose()
+	
+	corrector = H@(cs - D@alpha)
+	bkX = Bmat@Kinv@dataX
+	rms=0
+	mse = 0
+	for i in range(len(predictX)):
+		k = kernelVector(dataT,predictX[i])
+
+		ablp = Kinv @ k
+		ablup = Bmat @ ablp + C@phis[i]
+
+
+
+
+		ai = ablup + corrector[i]/beta * bkX
+		mse += np.dot(ai,K@ai) - 2 * np.dot(ai,ks[i])
+		ps[i] = np.dot(ai,dataX)
+		rms += (trueY[i] - ps[i])**2
+	rms = np.sqrt(rms/len(ps))
+	return Predictor(predictX,ps,rms,mse)
+
+def doubleEven_CLUP(predictX,dataT,dataX,order,steps):
+
+	trueY = Func(predictX)
+	K=kernelMatrix(dataT) #softening *kernel(0,0)* np.identity(len(dataT))
+	Kinv = np.linalg.inv(K)
+	w = np.matmul(Kinv,dataX)
+	n = len(dataX)
+	Phi = np.zeros((order+1,len(dataT)))
+	for m in range(0,order+1):
+		for j in range(len(dataT)):
+			Phi[m,j] = phi(2*m,dataT[j])
+	PhiT = Phi.transpose()
+	phis = []
+	v = []
+	M = np.matmul(Phi,np.matmul(Kinv,PhiT))
+	Minv = np.linalg.inv(M)
+	C = np.matmul(np.matmul(Kinv,PhiT),Minv)
+	Bmat = np.identity(n)-np.matmul(C,Phi)
+	alpha = np.zeros((len(predictX),1))
+	ell = np.zeros((len(predictX),1))
+	vecs =[]
+	ks = []
+	ellBottom = np.dot(w,np.matmul(Bmat,np.matmul(K,np.matmul(Bmat,w))))
+	ellLeft = np.matmul(K,np.matmul(Bmat,w))
+	beta = np.dot(np.matmul(Bmat,w),dataX)
+	for i in range(len(predictX)):
+		t = predictX[i]
+		
+		k=kernelVector(dataT,t)
+		ks.append(k)
+		vi = np.matmul(Kinv,k)
+		v.append(vi)
+		phiVec = np.zeros(order+1)
+		for j in range(order+1):
+			phiVec[j] = phi(2*j,t)
+		phis.append(phiVec)
+
+		vec = np.matmul(Bmat,vi) + np.matmul(C,phiVec)
+		vecs.append(vec)
+		alpha[i] = np.dot(vec,dataX)
+		
+	
+
+		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
+		ell[i] = ellTop/ellBottom
+		
+	mDim = int((len(predictX) -1	)/2)
+	print(mDim)
+	D = np.zeros((mDim,len(predictX)))
+	for i in range(mDim):
+		D[i,i] = -1
+		offset = len(predictX)-1
+		D[i,offset-i] = 1
+
+	cs = np.zeros((mDim,1))
+	ps = alpha
+
+	DDTinv = np.linalg.inv(np.matmul(D,D.transpose()))
+	Dalpha = np.matmul(D,alpha)
+	H = np.matmul(D.transpose(),DDTinv)
+	Ht = H.transpose()
+	
+	corrector = H@(cs - D@alpha)
+	bkX = Bmat@Kinv@dataX
+	rms=0
+	mse = 0
+	for i in range(len(predictX)):
+		k = kernelVector(dataT,predictX[i])
+
+		ablp = Kinv @ k
+		ablup = Bmat @ ablp + C@phis[i]
+
+
+
+
+		ai = ablup + corrector[i]/beta * bkX
+		mse += np.dot(ai,K@ai) - 2 * np.dot(ai,ks[i])
+		ps[i] = np.dot(ai,dataX)
+		rms += (trueY[i] - ps[i])**2
+	rms = np.sqrt(rms/len(ps))
+	return Predictor(predictX,ps,rms,mse)
+
+
 def Func(t):
-	return 70.0/(1 + np.exp(-t)) +100 + 40.0/(1 + np.exp(-(t-5)*2)) 
+	return t*t - 0.01*t**4 + 3*np.cos(3*t)
+	# return 70.0/(1 + np.exp(-t)) +100 + 40.0/(1 + np.exp(-(t-5)*2)) 
 	# return t + (t+10)**2 - (t/3.142)**4
 
 def GenerateData(nData):
 	#synthesises a sample from Func()
 	#two methods of choosing x points -- either clustered, or totally uniform
-	scatter = 0.3
-	t = np.linspace(xMin,xMax,nData) + scatter*np.random.normal(0,1,nData,)
+	scatter = 0.9
+	t = np.random.uniform(xMin,xMax,(nData,))
+	# t = np.linspace(xMin,xMax,nData) + scatter*np.random.normal(0,1,nData,)
 	x = Func(t) + np.random.normal(0,dataNoise,nData,)
 	return [t,x]
 
@@ -369,5 +536,59 @@ def blupTest():
 	pt.ylabel("$X_t$")
 	pt.legend()
 	specialShow()
-# np.random.seed(0)
-blupTest()
+
+def evenTest():
+	
+	# def Func(t):
+	# 	return t**2
+
+	ndat = 40
+	global kernelSigma
+	kernelSigma = 1
+	[t,x] = GenerateData(ndat)
+	extern = max(max(t),-min(t))
+	print(extern)
+	tt = np.linspace(-extern,extern,171)
+	pt.plot(tt,Func(tt),"k:",label="True Function")	
+	pt.scatter(t,x,label="Data")
+	
+	global m,c
+
+	m=0
+	c=0
+	blp = BLP(tt,t,x)
+	s, =pt.plot(blp.T,blp.X,'--',label="BLP, $\epsilon=$" + strRound(blp.RMS))
+	# clp = CLP(tt,t,x,1000)
+	# pt.plot(clp.T,clp.X,color=s.get_color(),label="CLP, $\epsilon=$" + strRound(clp.RMS))
+
+	# c = np.mean(x)
+	# blp = BLP(tt,t,x)
+	# s, =pt.plot(blp.T,blp.X,'--',label="BLP_Mean, $\epsilon=$" + strRound(blp.RMS))
+	# # clp = CLP(tt,t,x,3000)
+	# # pt.plot(clp.T,clp.X,color=s.get_color(),label="CLP_Mean, $\epsilon=$" + strRound(clp.RMS))
+
+	# m=(x[-1] - x[0])/(t[-1]- t[0])
+	# c = x[0] - m* t[0]
+	# priort = t[1:-1]
+	# priorx = x[1:-1]
+	# blp = BLP(tt,t,x)
+	# s, =pt.plot(blp.T,blp.X,'--',label="BLP_LinearPrior, $\epsilon=$" + strRound(blp.RMS))
+	# clp = CLP(tt,t,x,3000)
+	# pt.plot(clp.T,clp.X,color=s.get_color(),label="CLP_LinearPrior, $\epsilon=$" + strRound(clp.RMS))
+
+	for order in [1,3]:
+		blup = BLUP(tt,t,x,order)
+		# s, = pt.plot(blup.T,blup.X,'--',label=str(order)+"-BLUP, $\epsilon=$" + strRound(blup.RMS))
+		clup = even_CLUP(tt,t,x,2*order,1000)
+		s,=pt.plot(clup.T,clup.X,':',label=str(2*order)+"-e-CLUP, $\epsilon=$" + strRound(clup.RMS))
+		clup = doubleEven_CLUP(tt,t,x,order,1000)
+		pt.plot(clup.T,clup.X,color=s.get_color(),label=str(order)+"-doubleE-CLUP, $\epsilon=$" + strRound(clup.RMS))
+
+	pt.xlabel("$t$")
+	pt.ylabel("$X_t$")
+	pt.legend()
+	specialShow()
+
+np.random.seed(2)
+# blupTest()
+evenTest()
