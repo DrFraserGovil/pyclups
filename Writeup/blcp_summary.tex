@@ -542,8 +542,44 @@
 			\\
 			& = 2 \sum_i \left( \left[K^{-1} \Delta \vec{X} \cdot K \ai \right] \hat{e}_i - \left[K^{-1} \Delta \vec{X} \cdot \vec{k}_i \right] \hat{e}_i \right) \cdot \left(H \pdiv{\vec{c}}{z_k} \right)
 			\\
-			& = 2 \left(  \Delta\vec{X} \cdot \left( \ai - K^{-1} \vec{k}_i \right) \right) \cdot \left(H \pdiv{\vec{c}}{z_k} \right)
+			& = 2 \left[\sum_i \left( \vec{\delta} \cdot \ai - \vec{\delta} \cdot  \ai^{blp} \right) \hat{e}_i \right] \cdot H \pdiv{\vec{c}}{z_k}
 		\end{spalign}
+		Where $\vec{\delta} = \Delta \vec{X}$. 
+
+		\subsubsection{Sanity Check: Recovering the BLUP}
+
+			We should wish to note that in the case where the BLUP obeys the constraints, the CLUP $\to$ BLUP. When this is the case, we have $D \vec{\alpha} = \vec{c}$, where $\alpha_i = \ai^{blup} \cdot \vec{X}$, and so:
+			\begin{spalign}
+				\ai^\text{clup} & = \ai^\text{blup} + \vec{0}
+				\\
+				& = K^{-1} \Delta \vec{k}_i + C \vec{\varphi}_i 
+			\end{spalign}
+			We also recall that, by definition of the BLUP and the CLUP, $\Phi \ai^\text{blup} = \Phi \ai^\text{clup} = \varphi_i$, hence - Rearranging:
+			\begin{spalign}
+				\delta \cdot \ai^\text{clup} & = \delta \cdot \ai^\text{blup}
+				\\
+				& = \vec{X} \cdot \Delta^T \ai^\text{blup}
+				\\
+				& = \vec{X} \cdot (1 - C \Phi) \ai^\text{blup}
+				\\
+				& = \vec{X} \cdot (\ai^\text{blup} - C \vec{\varphi}_i )
+				\\
+				& = \vec{X} \cdot (K^{-1} \Delta \vec{k}_i)
+				\\
+				& = \delta \cdot K^{-1} \vec{k}_i
+				\\
+				& = \delta \cdot \ai^\text{blp}
+			\end{spalign}
+			Therefore, when the BLUP obeys the constraints, we find that:
+			\begin{spalign}
+				\left.\pdiv{\mathcal{L}}{z_k} \right|_{BLUP}& = 2 \left[\sum_i \left( \vec{\delta} \cdot \ai^{BLUP} - \vec{\delta} \cdot  \ai^{blp} \right) \hat{e}_i \right] \cdot H \pdiv{\vec{c}}{z_k}
+				\\
+				& =  2 \left[\sum_i \left(\vec{\delta} \cdot  \ai^{blp}  - \vec{\delta} \cdot  \ai^{blp} \right) \hat{e}_i \right] \cdot H \pdiv{\vec{c}}{z_k}
+				\\
+				& = 0
+			\end{spalign}
+			Therefore, when the BLUP obeys the constraints, it is a solution to the CLUP.
+
 	\subsection{The CL(U)P in Action}
 
 		\begin{figure}[t]
