@@ -4,12 +4,15 @@ from matplotlib import pyplot as pt
 from tqdm import tqdm
 import warnings
 from scipy import special
+import pyclup
+
+
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 0.35
 
-dataNoise = 0.7
+dataNoise = 1
 kernelNoise = dataNoise*10
 learningRate = 0.05
 learningMemory = 0.7
@@ -474,7 +477,7 @@ def doubleEven_CLUP(predictX,dataT,dataX,order,steps):
 
 
 def Func(t):
-	return t*t - 0.01*t**4 + 3*np.cos(3*t)
+	return t*t - 0.01*t**4# + 3*np.cos(3*t)
 	# return 70.0/(1 + np.exp(-t)) +100 + 40.0/(1 + np.exp(-(t-5)*2)) 
 	# return t + (t+10)**2 - (t/3.142)**4
 
@@ -483,8 +486,10 @@ def GenerateData(nData):
 	#two methods of choosing x points -- either clustered, or totally uniform
 	scatter = 0.9
 	t = np.random.uniform(xMin,xMax,(nData,))
+	t = np.sort(t)
 	# t = np.linspace(xMin,xMax,nData) + scatter*np.random.normal(0,1,nData,)
 	x = Func(t) + np.random.normal(0,dataNoise,nData,)
+	print(x-Func(t))
 	return [t,x]
 
 xMin = -10
@@ -589,6 +594,39 @@ def evenTest():
 	pt.legend()
 	specialShow()
 
-np.random.seed(2)
-blupTest()
+# np.random.seed(1)
+
+[t,x] = GenerateData(50)
+pt.scatter(t,x)
+
+K = pyclup.kernel.SquaredExponential(kernel_variance=10,kernel_scale=1,data_variance=dataNoise**2)
+Dc = pyclup.constraint.Constraint()
+
+tt = np.linspace(-10,10,151)
+m = (len(tt)-1)/2
+Dc.D = np.ones((1,len(tt)))
+Dc.c.Value = [266.7/(tt[1]- tt[0])]
+Dc.D[0,0]/= 2
+Dc.D[0,-1]/=2
+basis = lambda i,t : special.hermite(2*i,monic=True)(t)
+s = pyclup.clup.CLUP(K,Dc,basis)
+
+
+
+pred = s.Predict(tt,t,x)
+
+pt.plot(tt,Func(tt),'k:')
+pt.plot(tt,pred.BLP,label="BLP")
+pt.plot(tt,pred.BLUP,label="BLUP")
+pt.plot(tt,pred.CLUP,label="CLUP")
+print(np.trapz(pred.BLUP,tt.reshape(-1,1),axis=0))
+print(np.trapz(pred.CLUP,tt.reshape(-1,1),axis=0))
+# pt.plot(tt,Func(tt),":")
+pt.legend()
+
+pt.draw()
+pt.pause(00.01)
+input("Enter to exit")
+
+# blupTest()
 # evenTest()
