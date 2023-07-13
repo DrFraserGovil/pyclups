@@ -1,10 +1,15 @@
 import pyclup
 import numpy as np
+
+##return only CLUP & RMS values? (can keep the BLUP and BLP for debugging purposes?)
+## get the error range of the CLUP predictor to return as well
+## predictor-error weighted RMS?
 class Prediction:
 	T = None
 	BLP = None
 	BLUP = None
 	CLUP = None
+
 	def __init__(self,t,blp,blup,clup):
 		self.T = t
 		self.BLP = blp
@@ -12,18 +17,19 @@ class Prediction:
 		self.CLUP = clup
 
 class CLUP:
-    
+	trueFunc = None
+	
 	def __init__(self,kernel,constraint,basis):
 		self.Kernel = kernel
 		self.Constraint = constraint
 		self.Basis = basis
-		self.BasisOrder = 4
+		self.BasisOrder = 3
 
-	def Predict(self,predictPoints,dataT,dataX):
+	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
 		self.Constraint.Validate(predictPoints)
 
 
-		self.InitialiseComponents(predictPoints,dataT,dataX)
+		self.InitialiseComponents(predictPoints,dataT,dataX,errorX)
 
 		if self.Constraint.c.Constant:
 			if np.shape(self.PseudoInv)!=(0,0):
@@ -35,7 +41,19 @@ class CLUP:
 			else:
 				self.p_clups = self.p_blups
 		return Prediction(predictPoints,self.p_blps,self.p_blups,self.p_clups)
-	def InitialiseComponents(self,predictPoints,dataT,dataX):
+	
+
+
+	def InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
+		eX = np.array(errorX)
+		if len(np.atleast_1d(eX)) == 1:
+			dataVariance = np.ones(len(dataX)) * errorX**2
+		else:
+			if len(eX) != len(dataX):
+				raise ValueError(f"Data length {len(dataX)} and error length {len(eX)} are not concordant")
+			dataVariance= eX**2
+
+		print(dataVariance)		
 		print("initialising")
 		dx = np.array(dataX).reshape(-1,1)
 		self.Phi = np.zeros((self.BasisOrder+1,len(dataT)))
@@ -44,7 +62,8 @@ class CLUP:
 				self.Phi[m,i] = self.Basis(m,dataT[i])
 
 		##scope for some fancy cholesky stuff here -- will do boring way first to get it working
-		self.K = self.Kernel.Matrix(dataT)
+		self.K = self.Kernel.Matrix(dataT,dataVariance)
+		print(self.K)
 		self.Kinv = np.linalg.inv(self.K)
 		Minv = np.linalg.inv(self.Phi@self.Kinv@self.Phi.T)
 

@@ -10,10 +10,10 @@ import pyclup
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
-kernelSigma = 1.35
+kernelSigma = 10.35
 
-dataNoise = 1e-7
-kernelNoise =0.2
+dataNoise = 4
+kernelNoise =2
 learningRate = 0.05
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
@@ -263,7 +263,6 @@ def CLUP(predictX,dataT,dataX,order,steps):
 
 		ellTop = np.dot(ellLeft,vec) - np.dot(k,np.matmul(Bmat,w))
 		ell[i] = ellTop/ellBottom
-	print("ell = ",ell.transpose())
 	mDim = len(predictX) -1	
 	D = np.zeros((mDim,mDim+1))
 	for i in range(mDim):
@@ -358,7 +357,6 @@ def even_CLUP(predictX,dataT,dataX,order,steps):
 		ell[i] = ellTop/ellBottom
 		
 	mDim = int((len(predictX) -1	)/2)
-	print(mDim)
 	D = np.zeros((mDim,len(predictX)))
 	for i in range(mDim):
 		D[i,i] = -1
@@ -440,7 +438,6 @@ def doubleEven_CLUP(predictX,dataT,dataX,order,steps):
 		ell[i] = ellTop/ellBottom
 		
 	mDim = int((len(predictX) -1	)/2)
-	print(mDim)
 	D = np.zeros((mDim,len(predictX)))
 	for i in range(mDim):
 		D[i,i] = -1
@@ -489,7 +486,6 @@ def GenerateData(nData):
 	t = np.linspace(xMin,xMax,nData) + scatter*np.random.normal(0,1,nData,)
 	t = np.sort(t)
 	x = Func(t) + np.random.normal(0,dataNoise,nData,)
-	print(x-Func(t))
 	return [t,x]
 
 xMin = -10
@@ -552,7 +548,6 @@ def evenTest():
 	kernelSigma = 1
 	[t,x] = GenerateData(ndat)
 	extern = max(max(t),-min(t))
-	print(extern)
 	tt = np.linspace(-extern,extern,171)
 	pt.plot(tt,Func(tt),"k:",label="True Function")	
 	pt.scatter(t,x,label="Data")
@@ -597,24 +592,28 @@ def evenTest():
 # np.random.seed(1)
 
 def packageTest():
-	[t,x] = GenerateData(50)
+	[t,x] = GenerateData(15)
 	pt.scatter(t,x)
 
-	K = pyclup.kernel.SquaredExponential(kernel_variance=10,kernel_scale=1,data_variance=dataNoise**2)
-	Dc = pyclup.constraint.Constraint()
+	#compartmentalise the code: data + variance should stick together, kernel is the kernel is the kernel, shouldn't have to be data aware until it actually has to be
 
 	tt = np.linspace(-10,10,151)
 	m = (len(tt)-1)/2
-	Dc.D = np.ones((1,len(tt)))
-	Dc.c.Value = [266.7/(tt[1]- tt[0])]
-	Dc.D[0,0]/= 2
-	Dc.D[0,-1]/=2
+	K = pyclup.kernel.SquaredExponential(kernel_variance=3,kernel_scale=1)
+
+	cvec = pyclup.constraint.ConstantVector([266.7/(tt[1]- tt[0])])
+	Dmat =np.ones((1,len(tt)))
+	Dmat[0,0]/= 2
+	Dmat[0,-1]/=2
+
+	Dc = pyclup.constraint.Constraint(c=cvec,D=Dmat)
+
 	basis = lambda i,t : special.hermite(2*i,monic=True)(t)
 	s = pyclup.clup.CLUP(K,Dc,basis)
+	error_x = t*0.001
+	print(t)
 
-
-
-	pred = s.Predict(tt,t,x)
+	pred = s.Predict(tt,t,x,error_x)
 
 	pt.plot(tt,Func(tt),'k:')
 	pt.plot(tt,pred.BLP,label="BLP")
@@ -668,18 +667,14 @@ def ValidateTest():
 		for l in range(len(xs)):
 			# if l != j:
 			S[l,j] -= Kinv[l,j]/Kinv[j,j]
-			print(l,j,S[l,j])
+		print(Kinv[j,j])
 		# S[j,j] = 0
-		print(S)
 		print(np.linalg.norm(Kinfinv - S@Kinv))
 		q = Kinv[:,j].reshape(-1,1)/Kinv[j,j]
-		print("compare=",q.T)
 		
 		transX = np.array(xs).reshape(-1,1)
-		print((S.T@transX).T)
 		modX = transX
 		modX[j] -= float(q.T@transX  )
-		print(modX.T)
 		# print((transX - xs[j]*q).T)
 		for t in T:
 			kk = kernelVector(tts,t)
@@ -701,6 +696,8 @@ def ValidateTest():
 	pt.pause(00.01)
 	input("Enter to exit")
 # np.random.seed(1)
-ValidateTest()
+# ValidateTest()
+
+packageTest()
 # blupTest()
 # evenTest()

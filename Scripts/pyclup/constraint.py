@@ -3,6 +3,8 @@ import numpy as np
 ##things it should do: generate D, c, transforms
 ## validate data obeys assumptions of D?
 
+
+#private variables -- think about
 class ConstraintVector:
 
 	def __init__(self,constraintDimension,transform,transformDerivative,isConstant,isRevertible):
