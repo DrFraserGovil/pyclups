@@ -589,7 +589,87 @@
 			\includegraphics[width=\linewidth,keepaspectratio=true]{Figs/CLUP_comparison_moremoreData.png}
 			\caption{\it As with \ref{F:CLUP}, but with $N=520$ datapoints ($N=518$ for the `Prior' models)}\label{F:CLUP3}
 		\end{figure}
+
+
+
+	
 	\section{Optimising the Kernel}
 
+		\subsection{Leave-One-Out}
 
+			We note that `leaving a datapoint out' of the analysis is equivalent to the case where the error in the chosen datapoint is increased to an infinite degree of uncertainty. We can therefore write:
+			\begin{align}
+				K_{ij}^{(m)}(\mu) = \begin{cases}
+					K_{ii} + \mu^2 & \text{if } {i = j = m}
+					\\
+					K_{ij} & \text{else}
+				\end{cases} \LLR K^{(m)} = K + \mu^2 R_m
+			\end{align}
+			The inverse of this matrix can be computed as:
+			\begin{equation}
+				(K_{ij}^{(m)})^{-1} = \left( \mathds{1} + \mu^2K^{-1} R_m\right)^{-1} K^{-1}
+			\end{equation}
+			The product $\mathds{1} + K^{-1} R_m$ can be computed easily:
+			\begin{spalign}
+				(\mathds{1} + K^{-1} R_m)^{-1} & = \begin{pmatrix}
+					1 & 0 & \hdots & 0 & \mu^2 K^{-1}_{0m} & 0 & \hdots & 0
+					\\
+					0 & 1 & \hdots & 0 & \mu^2 K^{-1}_{1m} & 0 & \hdots & 0
+					\\
+					\vdots
+					\\
+					0 & 0 & \hdots & 0 & 1+\mu^2 K^{-1}_{mm} & 0 & \hdots & 0
+					\\
+					\vdots
+					\\
+					0 & 0 & \hdots & 0 & \mu^2 K^{-1}_{nm} & 0 & \hdots & 1
+				\end{pmatrix}^{-1}
+				\\
+				& = \begin{pmatrix}
+					1 & 0 & \hdots & 0 & -\frac{\mu^2 K^{-1}_{0m}}{1+\mu^2 K^{-1}_{mm}} & 0 & \hdots & 0
+					\\
+					0 & 1 & \hdots & 0 & -\frac{\mu^2 K^{-1}_{1m}}{1+\mu^2 K^{-1}_{mm}} & 0 & \hdots & 0
+					\\
+					\vdots
+					\\
+					0 & 0 & \hdots & 0 & \frac{1}{1+\mu^2 K^{-1}_{mm}} & 0 & \hdots & 0
+					\\
+					\vdots
+					\\
+					0 & 0 & \hdots & 0 & -\frac{\mu^2 K^{-1}_{nm}}{1+\mu^2 K^{-1}_{mm}} & 0 & \hdots & 1
+				\end{pmatrix}
+			\end{spalign}
+			In the limit that $\mu \to \infty$ (assuming that $K^{-1}_{mm} \neq 0$)
+			\begin{spalign}
+				(\mathds{1} + K^{-1} R_m)^{-1} & =  \begin{pmatrix}
+					1 & 0 & \hdots & 0 & -\frac{K^{-1}_{0m}}{K^{-1}_{mm}} & 0 & \hdots & 0
+					\\
+					0 & 1 & \hdots & 0 & -\frac{K^{-1}_{1m}}{ K^{-1}_{mm}} & 0 & \hdots & 0
+					\\
+					\vdots
+					\\
+					0 & 0 & \hdots & 0 & 0 & 0 & \hdots & 0
+					\\
+					\vdots
+					\\
+					0 & 0 & \hdots & 0 & -\frac{K^{-1}_{nm}}{K^{-1}_{mm}} & 0 & \hdots & 1
+				\end{pmatrix}
+				\\
+				& = S(m)
+			\end{spalign}
+			Hence:
+			\begin{spalign}
+				J(m)^{-1} & = \lim_{\mu \to \infty} \left(K^{(m)}(\mu)\right)^{-1}
+				\\
+				& = S(m) K^{-1} 
+			\end{spalign}
+			Hence the modified $\text{a}_\text{blp}$ is:
+			\begin{spalign}
+				{\a}^\text{blp}(m) = S(m) {\a}^\text{blp}
+			\end{spalign}
+			And the validation predictor is:
+			\begin{spalign}
+				\hat{X}(t,m) = {\a}^\text{blp} \cdot S^T(m) \vec{X}
+			\end{spalign}
+			If we write 
 \end{document}

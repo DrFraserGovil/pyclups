@@ -10,10 +10,10 @@ import pyclup
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
-kernelSigma = 0.35
+kernelSigma = 1.35
 
-dataNoise = 1
-kernelNoise = dataNoise*10
+dataNoise = 1e-7
+kernelNoise =0.2
 learningRate = 0.05
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
@@ -485,9 +485,9 @@ def GenerateData(nData):
 	#synthesises a sample from Func()
 	#two methods of choosing x points -- either clustered, or totally uniform
 	scatter = 0.9
-	t = np.random.uniform(xMin,xMax,(nData,))
+	# t = np.random.uniform(xMin,xMax,(nData,))
+	t = np.linspace(xMin,xMax,nData) + scatter*np.random.normal(0,1,nData,)
 	t = np.sort(t)
-	# t = np.linspace(xMin,xMax,nData) + scatter*np.random.normal(0,1,nData,)
 	x = Func(t) + np.random.normal(0,dataNoise,nData,)
 	print(x-Func(t))
 	return [t,x]
@@ -596,37 +596,111 @@ def evenTest():
 
 # np.random.seed(1)
 
-[t,x] = GenerateData(50)
-pt.scatter(t,x)
+def packageTest():
+	[t,x] = GenerateData(50)
+	pt.scatter(t,x)
 
-K = pyclup.kernel.SquaredExponential(kernel_variance=10,kernel_scale=1,data_variance=dataNoise**2)
-Dc = pyclup.constraint.Constraint()
+	K = pyclup.kernel.SquaredExponential(kernel_variance=10,kernel_scale=1,data_variance=dataNoise**2)
+	Dc = pyclup.constraint.Constraint()
 
-tt = np.linspace(-10,10,151)
-m = (len(tt)-1)/2
-Dc.D = np.ones((1,len(tt)))
-Dc.c.Value = [266.7/(tt[1]- tt[0])]
-Dc.D[0,0]/= 2
-Dc.D[0,-1]/=2
-basis = lambda i,t : special.hermite(2*i,monic=True)(t)
-s = pyclup.clup.CLUP(K,Dc,basis)
+	tt = np.linspace(-10,10,151)
+	m = (len(tt)-1)/2
+	Dc.D = np.ones((1,len(tt)))
+	Dc.c.Value = [266.7/(tt[1]- tt[0])]
+	Dc.D[0,0]/= 2
+	Dc.D[0,-1]/=2
+	basis = lambda i,t : special.hermite(2*i,monic=True)(t)
+	s = pyclup.clup.CLUP(K,Dc,basis)
 
 
 
-pred = s.Predict(tt,t,x)
+	pred = s.Predict(tt,t,x)
 
-pt.plot(tt,Func(tt),'k:')
-pt.plot(tt,pred.BLP,label="BLP")
-pt.plot(tt,pred.BLUP,label="BLUP")
-pt.plot(tt,pred.CLUP,label="CLUP")
-print(np.trapz(pred.BLUP,tt.reshape(-1,1),axis=0))
-print(np.trapz(pred.CLUP,tt.reshape(-1,1),axis=0))
-# pt.plot(tt,Func(tt),":")
-pt.legend()
+	pt.plot(tt,Func(tt),'k:')
+	pt.plot(tt,pred.BLP,label="BLP")
+	pt.plot(tt,pred.BLUP,label="BLUP")
+	pt.plot(tt,pred.CLUP,label="CLUP")
+	print(np.trapz(pred.BLUP,tt.reshape(-1,1),axis=0))
+	print(np.trapz(pred.CLUP,tt.reshape(-1,1),axis=0))
+	# pt.plot(tt,Func(tt),":")
+	pt.legend()
 
-pt.draw()
-pt.pause(00.01)
-input("Enter to exit")
+	pt.draw()
+	pt.pause(00.01)
+	input("Enter to exit")
 
+def ValidateTest():
+	[ts,xs] = GenerateData(50)
+	pt.scatter(ts,xs)
+
+	K = kernelMatrix(ts)
+	Kinv = np.linalg.inv(K)
+	KinvX = Kinv@xs
+	T = np.linspace(-10,10,300)
+	ps = []
+	for t in T:
+		k = kernelVector(ts,t)
+
+		ps.append(k.T@KinvX)
+
+	pt.plot(T,ps)
+	missed = []
+	for l in range(1):
+		j = np.random.choice(range(len(ts)))
+		while j in missed:
+			j = np.random.choice(range(len(ts)))
+		missed.append(j)
+		print("losing", j, ts[j])
+		tts  = np.append(ts[0:j],ts[j+1:])
+		xxs = np.append(xs[0:j],xs[j+1:])
+		Kp = kernelMatrix(tts)
+		Kinf = kernelMatrix(ts)
+		Kinf[j,j] += 1e25
+		Kinfinv = np.linalg.inv(Kinf)
+		KinfX = Kinfinv@xs
+		KpinvX = np.linalg.inv(Kp)@xxs
+		ps = []
+		p2 = []
+		p3=[]
+		i = 0
+
+		S = np.eye(len(xs))
+		for l in range(len(xs)):
+			# if l != j:
+			S[l,j] -= Kinv[l,j]/Kinv[j,j]
+			print(l,j,S[l,j])
+		# S[j,j] = 0
+		print(S)
+		print(np.linalg.norm(Kinfinv - S@Kinv))
+		q = Kinv[:,j].reshape(-1,1)/Kinv[j,j]
+		print("compare=",q.T)
+		
+		transX = np.array(xs).reshape(-1,1)
+		print((S.T@transX).T)
+		modX = transX
+		modX[j] -= float(q.T@transX  )
+		print(modX.T)
+		# print((transX - xs[j]*q).T)
+		for t in T:
+			kk = kernelVector(tts,t)
+			k = kernelVector(ts,t)
+			p = kk.T@KpinvX
+			anorm = Kinv@k
+			
+			
+			ps.append(p)
+		
+
+
+			p2.append(anorm.T@modX)
+			i+=1
+		s, = pt.plot(T,ps)
+		pt.plot(T,p2,':',color=s.get_color())
+		# pt.plot(T,p3,'--',color="k")
+	pt.draw()
+	pt.pause(00.01)
+	input("Enter to exit")
+# np.random.seed(1)
+ValidateTest()
 # blupTest()
 # evenTest()
