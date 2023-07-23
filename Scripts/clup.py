@@ -609,8 +609,8 @@ def packageTest():
 	Dc = pyclup.constraint.Constraint(c=cvec,D=Dmat)
 
 	basis = lambda i,t : special.hermite(2*i,monic=True)(t)
+	error_x = dataNoise
 	s = pyclup.clup.CLUP(K,Dc,basis)
-	error_x = t*0.001
 	print(t)
 
 	pred = s.Predict(tt,t,x,error_x)

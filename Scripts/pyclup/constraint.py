@@ -44,9 +44,9 @@ class Constraint:
 		self.validateMessage = ""
 
 		for key,value in kwargs.items():
-			if key == "D":
+			if key == "matrix":
 				self.D = value
-			elif key == "c":
+			elif key == "vector":
 				self.c = value
 			elif key == "validator":
 				self.validator = value

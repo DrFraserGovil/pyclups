@@ -68,7 +68,7 @@
 		\end{spalign}
 		Note that since the kernel is, by definition, symmetric in its arguments, $K^T = K$. Note that we have also taken the explicit step of writing our kernel as a relationship between the \textit{transformed} data - i.e. $X^\prime$ - the imposition of different functions $g(t)$ might therefore warrant different kernels. This is true even if the transform is the (commonly used) constant `mean scaling', $g(t) = \E{X_t} \approx \frac{1}{n} \vec{X} \cdot \mathds{1}$.
 
-		By performing this transform we have placed the incomputable terms - that of $\E{(X_t^\prime)^2}$ into a constant term. Since Lagrangians are invariant under constant scalings, it is possible to find an optimal value of $\a$ using only the remaining computable terms. 
+		By performing this transform we have placed the incomputable terms - that of $\E{(X_t^\prime)^2}$ into a constant term. Since Lagrangians are invariant under constant scaling, it is possible to find an optimal value of $\a$ using only the remaining computable terms. 
 
 		However - as we shall see - we are in the uncomfortable position of trying to impose conditions on the predicted values, $P_i = \hat{X}_{t_i} = g(t_i) + \ai \cdot \vec{X}^\prime$ whilst our object of interest is now the vector $\ai$. 
 
@@ -123,34 +123,14 @@
 			\begin{spalign}
 				\vec{p} = \vec{q} + \frac{c - \vec{q}\cdot \vec{d}}{\vec{d}^2} \vec{d} 
 			\end{spalign}
-			% \subsubsection*{An Example}
-			% 	Consider the case of two constraints: the fucntion must integrate to some value ($\mathcal{I}$), and the prediction is fixed at some known value for a given $\ell$, such that $P_\ell = \mathcal{P}$.
-
-			% 	This gives:
-			% 	\begin{spalign}
-			% 		D_{ij} & = \begin{cases} 1 & i = 0 \text{ or } j 0 \ell
-			% 			\\
-			% 			0 & \text{else}
-			% 		\end{cases}
-			% 		\LLR D \in \mathbb{R}^{2\times N}
-			% 		\\
-			% 		\vec{c} & = \begin{pmatrix} \mathcal{I} \\ \mathcal{P} \end{pmatrix}
-			% 	\end{spalign}
-			% 	Therefore:
-			% 	\begin{spalign}
-			% 		D^T D = \begin{pmatrix}
-			% 			N & 1
-			% 			\\
-			% 			1 & 1
-			% 		\end{pmatrix} \LLR (D^T D)^{-1} = \frac{1}{N-1} \begin{pmatrix} 1 & -1 \\ -1 & N \end{pmatrix}
-			% 	\end{spalign}
+			
 		\subsection{Inexact Constraints}
 
 			In the case where the constraints are not exact, but serve to enforce bounds -- i.e. monotonicity or positivity -- there is a problem since the parameters of the constraint are not fixed. We may not care, for example, how much greater $X_{i+1}$ is than $X_i$ is, only that it \textit{is} greater. 
 
-			We could enforce this through slack variables and utilise the KKT conditions, however for our purposes it is better to \textit{parameterise} the constraint. 
+			We could enforce this through slack variables and utilise the KKT conditions, however for our purposes it is better to \textit{parameterize} the constraint. 
 
-			Various parameterisations are possible, but perhaps the most comprehensible is to consider that the \textit{prediction} points, $P_i$ are a function of some other parameters $\vec{\theta} \in R^m$, such that:
+			Various parameterizations are possible, but perhaps the most comprehensible is to consider that the \textit{prediction} points, $P_i$ are a function of some other parameters $\vec{\theta} \in R^m$, such that:
 			\begin{spalign}
 				P_i & = \T(\vec{\theta})
 				\\
@@ -191,7 +171,7 @@
 			\end{equation}
 			In short, the CLP is equal to the BLP except when the condition is violated, at which point a hard cut is placed on it. 
 
-			More complex conditions however, can lead to more complex behaviour - the monotonicity constraint, for example, exhibits the obvious behaviour that it again follows the BLP when it is monotonic, and is flat when the BLP has a negative gradient -- but the \textit{location} where the CLP becomes flat is non-trivial, with flatness necessarily occuring \textit{before} the BLP changes direction: a tradeoff in following the BLP locally versus becoming too large too early without the ability to decrease due to the monotonic constraint.
+			More complex conditions however, can lead to more complex behaviour - the monotonicity constraint, for example, exhibits the obvious behaviour that it again follows the BLP when it is monotonic, and is flat when the BLP has a negative gradient -- but the \textit{location} where the CLP becomes flat is non-trivial, with flatness necessarily occurring \textit{before} the BLP changes direction: a tradeoff in following the BLP locally versus becoming too large too early without the ability to decrease due to the monotonic constraint.
 
 			In these cases a more complex search is required -- where the behaviour of the constraint is evident \textit{a priori} (such as the monotonic constraint), one can limit the space of the search. In the general case, however, a numerical optimisation is required. 
 
@@ -205,7 +185,7 @@
 			
 			We note that we performed a fairly drastic change in approach between the exact constraints and the inexact constraints -- is it possible to maintain the same approach for both?
 
-			We consider now that the parameters $\vec{c}$ of the constraints are functions of an (unconstrained) external parameter, $\vec{z} \in \mathbb{R}^m$ - letting $\vec{c} = \text{const}$ recovers the condition of the exact equalities. However, in any  other case we must still find the values of $\vec{z}$ which optimise the global Lagrangian - and hence we need to rewrite our Lagrangrian in terms of $\vec{c}$.
+			We consider now that the parameters $\vec{c}$ of the constraints are functions of an (unconstrained) external parameter, $\vec{z} \in \mathbb{R}^m$ - letting $\vec{c} = \text{const}$ recovers the condition of the exact equalities. However, in any  other case we must still find the values of $\vec{z}$ which optimise the global Lagrangian - and hence we need to rewrite our Lagrangian in terms of $\vec{c}$.
 
 			From \eref{E:ConstrainedSolution}, we can rewrite the predicted value-vector (recalling that $\vec{p}_i = P_i = \hat{X}_{t_i}$) as:
 			\begin{spalign}
@@ -301,7 +281,7 @@
 			\\
 			& = \vec{\beta} \cdot \vec{\varphi}(t)
 		\end{spalign}
-		We again note that $\vec{\beta}$ is not a known value, however, we continue in the expectation that it will cancel out in future. We also note that without further information we must assume that $\omega \to \infty$, in practive we can limit the dimensionality by assuming that $m_\omega(t) \approx m(t)$ for finite $\omega$. We can also formulate the matrix $\Phi$:
+		We again note that $\vec{\beta}$ is not a known value, however, we continue in the expectation that it will cancel out in future. We also note that without further information we must assume that $\omega \to \infty$, in practice we can limit the dimensionality by assuming that $m_\omega(t) \approx m(t)$ for finite $\omega$. We can also formulate the matrix $\Phi$:
 		\begin{spalign}
 			\Phi \in \mathbb{R}^{\omega\times n} \text{ such that } \Phi_{ij} = \varphi_i(t_j)
 		\end{spalign}
@@ -544,12 +524,12 @@
 
 		\begin{figure}[t]
 			\includegraphics[width=\linewidth,keepaspectratio=true]{Figs/CLUP_comparison.png}
-			\caption{\it A series of predictions on a dataset of $N=10$ points drawn from the dotted black curve with Gaussian noise ($\sigma=2$) added on. The models are described in detail in the text. The kernel has is a squared exponential with lengthscale $\ell_0 = 1$ throughout. $\epsilon$ is the RMS deviation from the true, underlying function -- this is distinct from the MSE, which is a function of the data.}\label{F:CLUP}
+			\caption{\it A series of predictions on a dataset of $N=10$ points drawn from the dotted black curve with Gaussian noise ($\sigma=2$) added on. The models are described in detail in the text. The kernel has is a squared exponential with length-scale $\ell_0 = 1$ throughout. $\epsilon$ is the RMS deviation from the true, underlying function -- this is distinct from the MSE, which is a function of the data.}\label{F:CLUP}
 		\end{figure}
 
 		
 
-		In Figure \ref{F:CLUP}, we show the relative perfomance of the constrained predictors when fitting a bi-sigmoid function with Gaussian noise generated. We impose the constraint that we know the underlying function is \textbf{monotonic}.
+		In Figure \ref{F:CLUP}, we show the relative performance of the constrained predictors when fitting a bi-sigmoid function with Gaussian noise generated. We impose the constraint that we know the underlying function is \textbf{monotonic}.
 		
 		The monotonicity constraint means that we should always have $P_{i} \geq P_{i-1}$, assuming the prediction points are suitably time-ordered - our inexact constraint therefore takes the form:
 		\begin{spalign}
@@ -570,11 +550,11 @@
 
 		We note that we deliberately offset and up-scaled the bi-sigmoid to highlight the difficulty faced by the BLP/CLP without the use of a prior function.
 
-		We see this reflected in Fig. \ref{F:CLUP}: the BLP and CLP demonstrate extremely poor fits to the data; with the BLP oscillating down to 0 in the gaps between datapoints. The CLP tries to strike a balance between the BLP fit and remaning monotonic - the result is an underwhelming fit which goes nowhere near the data. 
+		We see this reflected in Fig. \ref{F:CLUP}: the BLP and CLP demonstrate extremely poor fits to the data; with the BLP oscillating down to 0 in the gaps between datapoints. The CLP tries to strike a balance between the BLP fit and remaining monotonic - the result is an underwhelming fit which goes nowhere near the data. 
 		
 		The addition of a prior $g(t)$ shows a significant improvement in the fit -- the simple mean shift prevents the reversion down to 0, but i.e. at $t \approx -5$ results in a similar deviation upwards. The more complex LinearPrior models show a much better fit - the deviation at $t \approx -5$ is much smaller, and similar improvements are observed at $t \approx3,+7$. This is noteworthy as the model has only 8 points to infer from, and yet shows a better fit than the BLP/CLP\_Mean models which have more data to work from.
 		
-		The BLUP/CLUP models again show an improvement - the 1-BLUP/1-CLUP models are directly comparable to the LinearPrior models since they both attempt to set a linear function, but the LinearPrior use only the extremum points, and must then remove those datapoints to prevent overfitting: the 1-BLUP and 1-CLUP, however, simultaneously fit the linear fit and the predictor, which gives an improved fit. 
+		The BLUP/CLUP models again show an improvement - the 1-BLUP/1-CLUP models are directly comparable to the LinearPrior models since they both attempt to set a linear function, but the LinearPrior use only the extremum points, and must then remove those datapoints to prevent over-fitting: the 1-BLUP and 1-CLUP, however, simultaneously fit the linear fit and the predictor, which gives an improved fit. 
 
 		Finally, the 5-BLUP/5-CLUP models fit a $5^\text{th}$ order polynomial, and demonstrate a significant improvement in the fit -- the model is able to accurately anticipate that the line should be flat at $t\approx-5$.
 
@@ -589,8 +569,6 @@
 			\includegraphics[width=\linewidth,keepaspectratio=true]{Figs/CLUP_comparison_moremoreData.png}
 			\caption{\it As with \ref{F:CLUP}, but with $N=520$ datapoints ($N=518$ for the `Prior' models)}\label{F:CLUP3}
 		\end{figure}
-
-
 
 	
 	\section{Optimising the Kernel}
@@ -672,4 +650,40 @@
 				\hat{X}(t,m) = {\a}^\text{blp} \cdot S^T(m) \vec{X}
 			\end{spalign}
 			If we write 
+
+
+
+			\newpage
+	\section{Prediction Errors}
+
+		When we formulated our Lagrangian, \eref{E:GlobalLagrangian}, we note that we were performing the usual trick of optimising the \textit{logarithm} of the Lagrangian we were actually interested in:
+		\begin{equation}
+			L(\vec{\theta}) = e^{-\mathcal{L}(\vec{\theta})}
+		\end{equation}
+		By minimising $\mathcal{L}$, we were therefore maximising $L$. If we assume that -- even if it is non-Gaussian -- the structure of $\mathcal{L}$ is such that it is tightly peaked around the optimal value, we may approximate the behaviour around the peak by the second order Taylor expansion:
+		\begin{equation}
+			\mathcal{L} \approx \mathcal{L}_\text{opt} + \frac{1}{2}\vec{\theta}^T H \vec{\theta} \LLR L(\vec{\theta}) = L_0 e^{-\frac{1}{2}\vec{\theta}^T H \vec{\theta}}
+		\end{equation}
+		Where $H$ is the usual Hessian matrix:
+		\begin{equation}
+			H = \left. \pdiv{^2 \mathcal{L}}{\vec{\theta}^2} \right|_{\theta = \theta_\text{opt}}
+		\end{equation}
+		By comparison with a simple Gaussian, the 1-sigma error estimate is then:
+		\begin{equation}
+			\sigma_i = \frac{1}{\sqrt{H^{-1}_{ii}}}
+		\end{equation}
+		The error on the prediction value $\hat{X}_i$ can therefore be estimated by considering the Hessian:
+		\begin{spalign}
+			H_{ij} & = \pdiv{^2\mathcal{L}}{\hat{X}_i \hat{X}_j}
+			\\
+			& = \pdiv{}{\hat{X}_j} \left( \pdiv{\mathcal{L}}{\ai} \cdot \vec{X}\right)
+			\\
+			& =  \pdiv{}{\hat{X}_j} \left( \left[2 K \ai - 2 \ki \cdot \ai\right] \cdot \vec{X}\right)
+			\\
+			& = 2 \vec{X} \cdot K \vec{X}
+		\end{spalign}
+		Therefore, the BLP error is constant and equal to:
+		\begin{equation}
+			\sigma = \frac{1}{\sqrt{2 \vec{X} \cdot K \vec{X}}}
+		\end{equation}
 \end{document}

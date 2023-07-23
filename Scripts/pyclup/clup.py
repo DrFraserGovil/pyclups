@@ -53,8 +53,7 @@ class CLUP:
 				raise ValueError(f"Data length {len(dataX)} and error length {len(eX)} are not concordant")
 			dataVariance= eX**2
 
-		print(dataVariance)		
-		print("initialising")
+	
 		dx = np.array(dataX).reshape(-1,1)
 		self.Phi = np.zeros((self.BasisOrder+1,len(dataT)))
 		for i in range(len(dataT)):
@@ -63,7 +62,6 @@ class CLUP:
 
 		##scope for some fancy cholesky stuff here -- will do boring way first to get it working
 		self.K = self.Kernel.Matrix(dataT,dataVariance)
-		print(self.K)
 		self.Kinv = np.linalg.inv(self.K)
 		Minv = np.linalg.inv(self.Phi@self.Kinv@self.Phi.T)
 
