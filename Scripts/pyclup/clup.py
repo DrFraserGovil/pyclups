@@ -23,7 +23,7 @@ class CLUP:
 		self.Kernel = kernel
 		self.Constraint = constraint
 		self.Basis = basis
-		self.BasisOrder = 3
+		self.BasisOrder = 5
 
 	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
 		self.Constraint.Validate(predictPoints)
@@ -47,7 +47,6 @@ class CLUP:
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 				self.p_clups[i] = ai.T@dataX
-		
 		return Prediction(predictPoints,self.p_blps,self.p_blups,self.p_clups)
 	
 
@@ -108,17 +107,17 @@ class CLUP:
 
 		if self.Constraint.c.Revertible:
 			cT = self.Dpblub
-			cT[cT < 0] = 1e-8
 			self.Constraint.c.Invert(cT)
-
 		ms = np.zeros(shape=np.shape(self.Constraint.c.zs))
 		vs = np.zeros(shape=np.shape(self.Constraint.c.zs))
 		b1 = 0.7
 		b2 = 0.999
-		steps = 200
+		steps = 3000
 
-
-
+		oldScore = 0
+		delta = 0
+		minScore = None
+		minC = None
 		for l in range(steps):
 			diff = self.DDtInv@(self.Constraint.c.Value - self.Dpblub)
 
@@ -132,8 +131,38 @@ class CLUP:
 
 			c1 = 1.0/(1.0 - pow(b1,l+1))
 			c2 = 1.0/(1.0 - pow(b2,l+1))
-			step = -1e-2*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-10))
+			step = -1e-2*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
 
 			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
 			self.Constraint.c.Update(step)
+
+			gNorm = np.linalg.norm(grad/len(ms))
+			if gNorm < 1e-4:
+				mse = self._ComputeScore(predictPoints)
+				print("Reached gnorm at ",l,mse,gNorm)
+				break
+			if l % 5 == 0:
+				mse = self._ComputeScore(predictPoints)
+				q= abs(mse - oldScore)/(abs(mse)+1e-7)
+				delta = 0.3*delta + (1.0- 0.3)*q
+				oldScore = mse
+				if minScore == None or mse < minScore:
+					minScore = mse
+					minC = self.Constraint.c
+					minl = l
+				print(l,gNorm,mse,q,delta)
+				if (delta < 1e-6):
+					print("reached stability")
+					break
+		print("min c achieved at ",minl)
+		self.Constraint.c = minC
 			# print("\tnewpos",self.Constraint.c.Value.T)
+
+	def _ComputeScore(self,predictPoints):
+		corrector = self.PseudoInv@(self.Constraint.c.Value - self.Constraint.D@self.p_blups)	
+		mse = 0			
+		for i in range(len(predictPoints)):
+			ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
+			
+			mse += self.Kernel(predictPoints[i],predictPoints[i]) + ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
+		return mse

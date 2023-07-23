@@ -16,8 +16,14 @@ class ConstraintVector:
 		self.Constant = isConstant
 		self.Revertible = isRevertible
 		self._Inverse = inverter
+		self.LowerBound = None
+		self.UpperBound = None
 	def Update(self,step):
 		self.zs += step
+		if self.LowerBound != None:
+			self.zs = np.maximum(self.zs,self.LowerBound)
+		if self.UpperBound != None:
+			self.zs = np.minimum(self.zs,self.UpperBound)
 		self.Value = self.Transform(self.zs)
 
 	def Invert(self,target):
@@ -41,9 +47,8 @@ class OptimiseVector(ConstraintVector):
 		self.Revertible=revert
 		self.Value = self.Transform(self.zs)
 		self._Inverse = revFunc
-def PositiveVector(n):
-	
-	return OptimiseVector(n,lambda z: np.exp(z), lambda z: np.exp(z),True,lambda f: np.log(np.maximum(f,1e-9)))
+
+
 	
 
 
@@ -83,5 +88,30 @@ class Constraint:
 
 
 
-		
-		
+def Positive(n):
+	
+	c = OptimiseVector(n,lambda z: np.exp(z), lambda z: np.exp(z),True,lambda f: np.log(np.maximum(f,1e-9)))
+	D = np.eye(n)
+	return Constraint(vector=c,matrix=D)
+
+def Integrable(ts,integral):
+	c = ConstantVector([integral])
+	D = np.zeros((1,len(ts)))
+	
+	#assumes ts sorted, but not equidistant
+	for i in range(len(ts)-1):
+		dx= 0.5 * (ts[i+1] - ts[i])
+		D[0,i] += dx
+		D[0,i+1] += dx
+
+	return Constraint(vector=c,matrix=D,validator=lambda a: np.all(a[:-1] <= a[1:]),vmessage="The integrable constraint only works if the prediction points are sorted")
+def Monotonic(ts):
+	c = OptimiseVector(len(ts)-1,lambda z: np.exp(z), lambda z: np.exp(z)*0+1,True,lambda f: np.log(np.maximum(f,1e-1800))) #this contains a disgusting hack -- that the gradient is killed by the exp(z) term and removing it doesn't change the direction of optimisation, but does speed it up....do we care since the parameters are individually optimised in ADAM?
+	c.LowerBound = -20
+	c.UpperBound =20
+	D = np.zeros((len(ts)-1,len(ts)))
+	for i in range(len(ts)-1):
+		D[i,i] = -1
+		D[i,i+1] = 1
+	return Constraint(vector=c,matrix=D,validator=lambda a: np.all(a[:-1] <= a[1:]),vmessage="The monotonic constraint only works if the prediction points are sorted")
+

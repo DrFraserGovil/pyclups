@@ -12,7 +12,7 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 10.35
 
-dataNoise = 1
+dataNoise = 2
 kernelNoise =0.2
 learningRate = 0.05
 learningMemory = 0.7
@@ -474,7 +474,7 @@ def doubleEven_CLUP(predictX,dataT,dataX,order,steps):
 
 
 def Func(t):
-	# return t*t - 0.01*t**4# + 3*np.cos(3*t)
+	# return t*t - 0.01*t**4 + 3*np.cos(t**2/3)-10
 	return 70.0/(1 + np.exp(-t)) + 40.0/(1 + np.exp(-(t-5)*2)) 
 	# return t + (t+10)**2 - (t/3.142)**4
 
@@ -592,31 +592,31 @@ def evenTest():
 # np.random.seed(1)
 
 def packageTest():
-	[t,x] = GenerateData(15)
+	[t,x] = GenerateData(50)
 	pt.scatter(t,x)
 
 	#compartmentalise the code: data + variance should stick together, kernel is the kernel is the kernel, shouldn't have to be data aware until it actually has to be
 
-	tt = np.linspace(-10,10,150)
-	m = (len(tt)-1)/2
-	K = pyclup.kernel.SquaredExponential(kernel_variance=2,kernel_scale=1)
+	tt = np.linspace(-10,10,1500)
+	K = pyclup.kernel.SquaredExponential(kernel_variance=2.5,kernel_scale=1)
 
-	cvec = pyclup.constraint.PositiveVector(len(tt))
-	Dmat =np.eye(len(tt))
-
-
-	Dc = pyclup.constraint.Constraint(vector=cvec,matrix=Dmat)
-
+	# constraint = pyclup.constraint.Positive(len(tt))
+	constraint = pyclup.constraint.Monotonic(tt)
 	basis = lambda i,t : special.hermite(i,monic=True)(t)
 	error_x = dataNoise
-	s = pyclup.clup.CLUP(K,Dc,basis)
+	s = pyclup.clup.CLUP(K,constraint,basis)
 
 	pred = s.Predict(tt,t,x,error_x)
-
+	
+	print("blp area:", np.trapz(pred.BLP.T,tt))
+	print("blup area:", np.trapz(pred.BLUP.T,tt))
+	print("clup area:", np.trapz(pred.CLUP.T,tt))
 	pt.plot(tt,Func(tt),'k:')
 	pt.plot(tt,pred.BLP,label="BLP")
 	pt.plot(tt,pred.BLUP,label="BLUP")
 	pt.plot(tt,pred.CLUP,label="CLUP")
+	
+	# pt.plot(tt,pred.CLUP-pred.BLUP,label="CLUP")
 	# pt.plot(tt,Func(tt),":")
 	pt.legend()
 
@@ -690,7 +690,7 @@ def ValidateTest():
 	pt.draw()
 	pt.pause(00.01)
 	input("Enter to exit")
-np.random.seed(1)
+np.random.seed(3)
 # ValidateTest()
 
 packageTest()
