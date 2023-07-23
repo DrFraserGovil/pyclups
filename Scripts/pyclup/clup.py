@@ -29,7 +29,7 @@ class CLUP:
 		self.Constraint.Validate(predictPoints)
 
 
-		self.InitialiseComponents(predictPoints,dataT,dataX,errorX)
+		self._InitialiseComponents(predictPoints,dataT,dataX,errorX)
 
 		if self.Constraint.c.Constant:
 			if np.shape(self.PseudoInv)!=(0,0):
@@ -40,11 +40,19 @@ class CLUP:
 					self.p_clups[i] = ai.T@dataX
 			else:
 				self.p_clups = self.p_blups
+
+		else:
+			self._Optimise(predictPoints)
+			corrector = self.PseudoInv@(self.Constraint.c.Value - self.Constraint.D@self.p_blups)				
+			for i in range(len(predictPoints)):
+				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
+				self.p_clups[i] = ai.T@dataX
+		
 		return Prediction(predictPoints,self.p_blps,self.p_blups,self.p_clups)
 	
 
 
-	def InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
+	def _InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
 		eX = np.array(errorX)
 		if len(np.atleast_1d(eX)) == 1:
 			dataVariance = np.ones(len(dataX)) * errorX**2
@@ -77,7 +85,8 @@ class CLUP:
 		self.delta = self.Kinv@Delta@dx
 		self.beta = dx.T@self.delta
 
-		self.PseudoInv = self.Constraint.D.T @ np.linalg.inv(self.Constraint.D@self.Constraint.D.T)
+		self.DDtInv = np.linalg.inv(self.Constraint.D@self.Constraint.D.T)
+		self.PseudoInv = self.Constraint.D.T @ self.DDtInv
 
 		for i in range(len(predictPoints)):
 			self.ks[i] = self.Kernel.Vector(dataT,predictPoints[i])
@@ -90,6 +99,41 @@ class CLUP:
 
 			self.p_blps[i] = dx.T@self.a_blps[i]
 			self.p_blups[i] = dx.T@self.a_blups[i]
+
+		self.Dpblub = self.Constraint.D @ self.p_blups
 		# print(np.shape(self.p_blups))
 
-			
+	def _Optimise(self, predictPoints):
+
+
+		if self.Constraint.c.Revertible:
+			cT = self.Dpblub
+			cT[cT < 0] = 1e-8
+			self.Constraint.c.Invert(cT)
+
+		ms = np.zeros(shape=np.shape(self.Constraint.c.zs))
+		vs = np.zeros(shape=np.shape(self.Constraint.c.zs))
+		b1 = 0.7
+		b2 = 0.999
+		steps = 200
+
+
+
+		for l in range(steps):
+			diff = self.DDtInv@(self.Constraint.c.Value - self.Dpblub)
+
+			dcdz = self.Constraint.c.Derivative()
+			if np.shape(dcdz) == np.shape(diff):
+				grad = 2*np.multiply(dcdz,diff)
+			# print(l,"\n\tpos",self.Constraint.c.Value.T,"\n\tGrad",grad.T)
+
+			ms = b1 * ms + (1.0 - b1) * grad
+			vs = b2 * vs + (1.0 - b2)*np.multiply(grad,grad)
+
+			c1 = 1.0/(1.0 - pow(b1,l+1))
+			c2 = 1.0/(1.0 - pow(b2,l+1))
+			step = -1e-2*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-10))
+
+			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
+			self.Constraint.c.Update(step)
+			# print("\tnewpos",self.Constraint.c.Value.T)

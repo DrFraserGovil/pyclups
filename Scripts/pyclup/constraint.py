@@ -7,7 +7,7 @@ import numpy as np
 #private variables -- think about
 class ConstraintVector:
 
-	def __init__(self,constraintDimension,transform,transformDerivative,isConstant,isRevertible):
+	def __init__(self,constraintDimension,transform,transformDerivative,isConstant,isRevertible,inverter=None):
 		self.Dim = constraintDimension
 		self.zs = np.zeros((constraintDimension,1))
 		self.Transform= transform
@@ -15,26 +15,38 @@ class ConstraintVector:
 		self.Value = transform(self.zs)
 		self.Constant = isConstant
 		self.Revertible = isRevertible
+		self._Inverse = inverter
 	def Update(self,step):
 		self.zs += step
+		self.Value = self.Transform(self.zs)
+
+	def Invert(self,target):
+		self.zs = self._Inverse(target)
+		self.Value = self.Transform(self.zs)
 	def Derivative(self):
-		return self.Derivative(self.zs)
+		return self._Derivative(self.zs)
 class ConstantVector(ConstraintVector):
 	def __init__(self,values):
 		self.Dim = len(values)
 		self.Constant = True
 		self.Value = np.reshape(values,(len(values),1))
 
-class OptimiseVector(ConstantVector):
-	def __init__(self,dimension,transform,transformDerivative):
+class OptimiseVector(ConstraintVector):
+	def __init__(self,dimension,transform,transformDerivative,revert=False,revFunc=None):
 		self.Dim = dimension
 		self.zs = np.zeros((dimension,1))
 		self.Transform = transform
 		self._Derivative = transformDerivative
 		self.Constant = False
-		self.Revertible=False
-
+		self.Revertible=revert
+		self.Value = self.Transform(self.zs)
+		self._Inverse = revFunc
+def PositiveVector(n):
 	
+	return OptimiseVector(n,lambda z: np.exp(z), lambda z: np.exp(z),True,lambda f: np.log(np.maximum(f,1e-9)))
+	
+
+
 class Constraint:
     
 	def __init__(self,**kwargs):

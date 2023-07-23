@@ -12,8 +12,8 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 kernelSigma = 10.35
 
-dataNoise = 4
-kernelNoise =2
+dataNoise = 1
+kernelNoise =0.2
 learningRate = 0.05
 learningMemory = 0.7
 learningMemory_SecondMoment = 0.99
@@ -474,8 +474,8 @@ def doubleEven_CLUP(predictX,dataT,dataX,order,steps):
 
 
 def Func(t):
-	return t*t - 0.01*t**4# + 3*np.cos(3*t)
-	# return 70.0/(1 + np.exp(-t)) +100 + 40.0/(1 + np.exp(-(t-5)*2)) 
+	# return t*t - 0.01*t**4# + 3*np.cos(3*t)
+	return 70.0/(1 + np.exp(-t)) + 40.0/(1 + np.exp(-(t-5)*2)) 
 	# return t + (t+10)**2 - (t/3.142)**4
 
 def GenerateData(nData):
@@ -597,21 +597,19 @@ def packageTest():
 
 	#compartmentalise the code: data + variance should stick together, kernel is the kernel is the kernel, shouldn't have to be data aware until it actually has to be
 
-	tt = np.linspace(-10,10,151)
+	tt = np.linspace(-10,10,150)
 	m = (len(tt)-1)/2
-	K = pyclup.kernel.SquaredExponential(kernel_variance=3,kernel_scale=1)
+	K = pyclup.kernel.SquaredExponential(kernel_variance=2,kernel_scale=1)
 
-	cvec = pyclup.constraint.ConstantVector([266.7/(tt[1]- tt[0])])
-	Dmat =np.ones((1,len(tt)))
-	Dmat[0,0]/= 2
-	Dmat[0,-1]/=2
+	cvec = pyclup.constraint.PositiveVector(len(tt))
+	Dmat =np.eye(len(tt))
 
-	Dc = pyclup.constraint.Constraint(c=cvec,D=Dmat)
 
-	basis = lambda i,t : special.hermite(2*i,monic=True)(t)
+	Dc = pyclup.constraint.Constraint(vector=cvec,matrix=Dmat)
+
+	basis = lambda i,t : special.hermite(i,monic=True)(t)
 	error_x = dataNoise
 	s = pyclup.clup.CLUP(K,Dc,basis)
-	print(t)
 
 	pred = s.Predict(tt,t,x,error_x)
 
@@ -619,8 +617,6 @@ def packageTest():
 	pt.plot(tt,pred.BLP,label="BLP")
 	pt.plot(tt,pred.BLUP,label="BLUP")
 	pt.plot(tt,pred.CLUP,label="CLUP")
-	print(np.trapz(pred.BLUP,tt.reshape(-1,1),axis=0))
-	print(np.trapz(pred.CLUP,tt.reshape(-1,1),axis=0))
 	# pt.plot(tt,Func(tt),":")
 	pt.legend()
 
@@ -649,7 +645,6 @@ def ValidateTest():
 		while j in missed:
 			j = np.random.choice(range(len(ts)))
 		missed.append(j)
-		print("losing", j, ts[j])
 		tts  = np.append(ts[0:j],ts[j+1:])
 		xxs = np.append(xs[0:j],xs[j+1:])
 		Kp = kernelMatrix(tts)
@@ -695,7 +690,7 @@ def ValidateTest():
 	pt.draw()
 	pt.pause(00.01)
 	input("Enter to exit")
-# np.random.seed(1)
+np.random.seed(1)
 # ValidateTest()
 
 packageTest()
