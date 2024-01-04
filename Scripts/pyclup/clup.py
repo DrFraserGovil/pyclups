@@ -50,7 +50,6 @@ class CLUP:
 		return Prediction(predictPoints,self.p_blps,self.p_blups,self.p_clups)
 	
 
-
 	def _InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
 		eX = np.array(errorX)
 		if len(np.atleast_1d(eX)) == 1:
@@ -76,6 +75,7 @@ class CLUP:
 		Delta = (np.eye(len(dataT)) - C@self.Phi).T
 
 		self.ks = [np.zeros((0))]*len(predictPoints)
+		self.gammas = [np.zeros((0))]*len(predictPoints)
 		self.a_blps = [np.zeros((0))]*len(predictPoints)
 		self.a_blups = [np.zeros((0))]*len(predictPoints)
 		self.p_blps = np.zeros((len(predictPoints),1))
@@ -83,6 +83,8 @@ class CLUP:
 		self.p_clups = np.zeros((len(predictPoints),1))
 		self.delta = self.Kinv@Delta@dx
 		self.beta = dx.T@self.delta
+
+		self.epsilon = 1.0/self.beta * self.delta
 
 		self.DDtInv = np.linalg.inv(self.Constraint.D@self.Constraint.D.T)
 		self.PseudoInv = self.Constraint.D.T @ self.DDtInv
@@ -93,7 +95,7 @@ class CLUP:
 			self.a_blps[i] = self.Kinv@self.ks[i]
 			phi = np.array([self.Basis(j,predictPoints[i]) for j in range(self.BasisOrder+1)]).reshape(-1,1)
 			
-
+			
 			self.a_blups[i] = Delta.T@self.a_blps[i] + C@phi
 
 			self.p_blps[i] = dx.T@self.a_blps[i]
@@ -118,6 +120,7 @@ class CLUP:
 		delta = 0
 		minScore = None
 		minC = None
+		minl = -1
 		for l in range(steps):
 			diff = self.DDtInv@(self.Constraint.c.Value - self.Dpblub)
 
@@ -166,3 +169,4 @@ class CLUP:
 			
 			mse += self.Kernel(predictPoints[i],predictPoints[i]) + ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
 		return mse
+	

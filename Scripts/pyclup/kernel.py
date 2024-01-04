@@ -1,9 +1,6 @@
 import pyclup 
 import numpy as np
 
-
-
-
 class Kernel:
 	def __init__(self,**kwargs):  
 		self.param = [1,1]

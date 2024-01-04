@@ -91,6 +91,8 @@ class Constraint:
 def Positive(n):
 	
 	c = OptimiseVector(n,lambda z: np.exp(z), lambda z: np.exp(z),True,lambda f: np.log(np.maximum(f,1e-9)))
+	c.LowerBound =-10
+	c.UpperBound = 10
 	D = np.eye(n)
 	return Constraint(vector=c,matrix=D)
 

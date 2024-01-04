@@ -656,34 +656,117 @@
 			\newpage
 	\section{Prediction Errors}
 
-		When we formulated our Lagrangian, \eref{E:GlobalLagrangian}, we note that we were performing the usual trick of optimising the \textit{logarithm} of the Lagrangian we were actually interested in:
-		\begin{equation}
-			L(\vec{\theta}) = e^{-\mathcal{L}(\vec{\theta})}
-		\end{equation}
-		By minimising $\mathcal{L}$, we were therefore maximising $L$. If we assume that -- even if it is non-Gaussian -- the structure of $\mathcal{L}$ is such that it is tightly peaked around the optimal value, we may approximate the behaviour around the peak by the second order Taylor expansion:
-		\begin{equation}
-			\mathcal{L} \approx \mathcal{L}_\text{opt} + \frac{1}{2}\vec{\theta}^T H \vec{\theta} \LLR L(\vec{\theta}) = L_0 e^{-\frac{1}{2}\vec{\theta}^T H \vec{\theta}}
-		\end{equation}
-		Where $H$ is the usual Hessian matrix:
-		\begin{equation}
-			H = \left. \pdiv{^2 \mathcal{L}}{\vec{\theta}^2} \right|_{\theta = \theta_\text{opt}}
-		\end{equation}
-		By comparison with a simple Gaussian, the 1-sigma error estimate is then:
-		\begin{equation}
-			\sigma_i = \frac{1}{\sqrt{H^{-1}_{ii}}}
-		\end{equation}
-		The error on the prediction value $\hat{X}_i$ can therefore be estimated by considering the Hessian:
-		\begin{spalign}
-			H_{ij} & = \pdiv{^2\mathcal{L}}{\hat{X}_i \hat{X}_j}
-			\\
-			& = \pdiv{}{\hat{X}_j} \left( \pdiv{\mathcal{L}}{\ai} \cdot \vec{X}\right)
-			\\
-			& =  \pdiv{}{\hat{X}_j} \left( \left[2 K \ai - 2 \ki \cdot \ai\right] \cdot \vec{X}\right)
-			\\
-			& = 2 \vec{X} \cdot K \vec{X}
-		\end{spalign}
-		Therefore, the BLP error is constant and equal to:
-		\begin{equation}
-			\sigma = \frac{1}{\sqrt{2 \vec{X} \cdot K \vec{X}}}
-		\end{equation}
+		\subsection{Gaussian-Style Errors}
+
+			In this attempt, we try to derive the errors in the standard Bayesian-analysis way (c.f. Sivia, etc.).
+
+			When we formulated our Lagrangian, \eref{E:GlobalLagrangian}, we note that we were performing the usual trick of optimising the \textit{logarithm} of the Lagrangian we were actually interested in:
+			\begin{equation}
+				L(\vec{\theta}) = e^{-\mathcal{L}(\vec{\theta})}
+			\end{equation}
+			By minimising $\mathcal{L}$, we were therefore maximising $L$. If we assume that -- even if it is non-Gaussian -- the structure of $\mathcal{L}$ is such that it is tightly peaked around the optimal value, we may approximate the behaviour around the peak by the second order Taylor expansion:
+			\begin{equation}
+				\mathcal{L} \approx \mathcal{L}_\text{opt} + \frac{1}{2}\vec{\theta}^T H \vec{\theta} \LLR L(\vec{\theta}) = L_0 e^{-\frac{1}{2}\vec{\theta}^T H \vec{\theta}}
+			\end{equation}
+			Where $H$ is the usual Hessian matrix:
+			\begin{equation}
+				H = \left. \pdiv{^2 \mathcal{L}}{\vec{\theta}^2} \right|_{\theta = \theta_\text{opt}}
+			\end{equation}
+			By comparison with a simple Gaussian, the 1-sigma error estimate is then:
+			\begin{equation}
+				\sigma_i = \frac{1}{\sqrt{H^{-1}_{ii}}}
+			\end{equation}
+			The error on the optimised value $\ai$ is therefore:
+			\begin{spalign}
+				\pdiv{^2\mathcal{L}}{\ai \partial \vec{a}_j} = K \delta_{ij} \LLR \sigma_{[\ai]_j} = \frac{1}{\sqrt{K^{-1}_{jj}}}
+			\end{spalign}
+			Therefore if we write $[\vec{\sigma}]_j = \frac{1}{\sqrt{K^{-1}_{jj}}}$, we have:
+			\begin{equation}
+				\ai = \ai^{\text{clup}} \pm \vec{\sigma}
+			\end{equation}
+			Hence:
+			\begin{spalign}
+				\hat{X}_i = \ai^{\text{clup}}\cdot \vec{X} \pm \vec{\sigma} \cdot \vec{X}
+			\end{spalign}
+			Notably, this is independent of $i$, which means that the error is constant across all points - we don't, for example, predict small errors when predicting a point close to one of our  observed sample points.
+
+		% \subsection{AG-Style Errors}
+
+		% 	Here we try to replicate the error analysis of Anscombe \& Gration. \textbf{However}, I note that A\&G switch to using Covariances rather than Second Moments in the BLUP -- does this matter for us?!
+
+		% 	In their notation, they have $\vec{r}(t)_i = \text{cov}(t,X_i)$ instead of $\vec{k}(t)_i = \text{mom}(t,X_i)$ - which I will maintain for now. 
+
+		% 	The MSE of the BLUP is:
+		% 	\begin{equation}
+				
+		% 	\end{equation}
+
+		\subsection{MCMC Errors}
+
+			I propose a different kind of error analysis, based on MCMC methods. The reasoning for this is that, by the nature of the kind of constraints we are trying to impose, it does not make sense to talk about the errors in each prediction as independent. This follows from our conversion from a local-MSE to the global Lagrangian: individual points might have a large individual error (i.e. a high-MSE), but which ensures a globally minimised error: does it make sense to assign this point a large error when it, in fact, cannot be moved without altering where every other point in the curve would be placed? 
+
+			In short: we are predicting \textit{curves} not points, and so it does not make sense to assign errors to individual points, but only to curves as a unit. 
+
+			The problem in doing so is that we need a set of parameters which can be varied in order to produce different values of $\mathcal{L}$, and hence compute the transition probabilities for the MCMC effort -- in the case of the optimised-CLUP (i.e. the monotonic constraint), we might naturally say that $\vec{c}$ is the obvious choice -- however this does not generalise to the exact-CLUP (i.e. the even or integrable), where we would have no functions to optimise -- it also suggests that the only source of error is in the optimisation - whereas `close but wrong' solutions should also arise in the BLP/BLUP/exact-CLUP case. 
+
+			We therefore suggest that the parameters to vary are the joint set $\vec{y} = (\vec{p}^\text{blup})$ - that is because this can define a unique predictor, through the following procedure:
+
+			\begin{enumerate}
+				\item Propose $\vec{p}_\text{blup}$
+				\item Segment the constraint into inexact ($\vec{c}^{(i)}$) and exact ($\vec{c}^(e)$)
+				\item Evaluate $D \vec{p}_\text{blup} = \tilde{c}$. 
+				\item Let $\vec{c}^\prime_i = \begin{cases} 
+					\tilde{c}_i & \text{if } \tilde{c}_i > m_i
+					\\
+					m_i & \text{else}
+				\end{cases}$
+				\item Set $\vec{a}_i^\text{blup-new} = \frac{p^\text{blup}}{p^\text{blup-old}} \vec{a}_i^\text{blup-old}$
+				\item Then:
+				$$ \ai^\text{clup} = \vec{a}_i^\text{blup-new} +  \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c}^\prime - D \vec{p}^\text{blup}\right)\right)\cdot \hat{e}_i}{\vec{X} \cdot K^{-1} \Delta\vec{X}} K^{-1} \Delta\vec{X}$$
+			\end{enumerate}
+			Step 4 is a quick-and-dirty mapping from a proposed curve to one which obeys the inexact constraints - recalling that our setup is such that we have formulated these constraints in terms of positive slack constraints: $g(\{p\}) \geq 0 \to g(\{p\}) = s^2$ -- in the case of `less than relations' ($g(\{p\})<0$) it is therefore important to formulate $D$ in terms of $-g$, such that it becomes a greater-than problem.
+			% \begin{spalign}
+			% 	\vec{a}_{t_i}^\text{blup}(\vec{p}_\text{blup}) & = K^{-1} \Delta \ki + C \vec{\varphi}_i + \frac{\vec{p}^\text{blup} \cdot \hat{e}_i-  \vec{X} \cdot K^{-1} \Delta \ki - \vec{X} \cdot  C \vec{\varphi}_i }{\vec{X} \cdot K^{-1} \Delta \vec{X}} K^{-1} \Delta \vec{X}
+			% 	\\
+			% 	\ai^\text{clup}(\vec{p}_\text{blup},\vec{z})  & = \vec{a}_{t_i}^\text{blup}(\vec{p}_\text{blup}) + \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c}(\vec{z}) - D \vec{p}^\text{blup}\right)\right)\cdot \hat{e}_i}{\vec{X} \cdot K^{-1} \Delta\vec{X}} K^{-1} \Delta\vec{X}
+			% \end{spalign}
+			% Given MCMC is computationally intensive, it behoves us to note where components can be precomputed:
+			% \begin{spalign}
+			% 	\vec{a}_{t_i}^\text{blup}(\vec{p}_\text{blup}) & = \underbrace{\left( K^{-1} \Delta \ki + C \vec{\varphi}_i - \frac{\vec{X} \cdot K^{-1} \Delta \ki - \vec{X} \cdot  C \vec{\varphi}_i }{\vec{X} \cdot K^{-1} \Delta \vec{X}} K^{-1} \Delta \vec{X} \right)}_{\vec{\gamma}_i}+ \vec{p}^\text{blup}\cdot \hat{e}_i\underbrace{\left(\frac{1}{\vec{X} \cdot K^{-1} \Delta \vec{X}} K^{-1} \Delta \vec{X} \right)}_{\vec{\epsilon}}
+			% 	\\
+			% 	& = \vec{\gamma}_i + {p}^\text{blup}\cdot \hat{e}_i \vec{\epsilon}
+			% \end{spalign}
+			% Therefore:
+			% \begin{spalign}
+			% 	\ai^\text{clup} & = \vec{\gamma}_i +f_i \vec{\epsilon}
+			% 	\\
+			% 	f_i & =  \left( H \vec{c}(\vec{z}) + G \vec{p}^\text{blup} \right) \cdot \vec{e}_i
+			% 	\\
+			% 	H & = D^T (DD^T)^{-1}
+			% 	\\
+			% 	G & = \mathds{1} - D^T(DD^T)^{-1} D
+			% \end{spalign}
+			% Note that whilst $H$ is the pseudo-inverse of $D$, this only holds with left-multiplication (i.e. $D H = \mathds{1}$), but in general it is not true that $HD = \mathds{1}$, and so $G \neq 0$ - though in some cases this might be true (i.e. in the positive-constraint case, in which $D = \mathds{1}$).
+			
+			% The Global Lagrangian (given that the constraints are automatically met) is then:
+			% \begin{spalign}
+			% 	\mathcal{L} & = \sum_i \ai \cdot K \ai - 2 \ki \cdot \ai
+			% 	\\
+			% 	& =\text{const} +  \sum_i \left( \vec{\gamma}_i + f_i \vec{\epsilon} \right) \cdot K \left(\gamma_i + f_i \vec{\epsilon} \right) - 2 \ki \cdot (\vec{\gamma}_i + f_i \vec{\epsilon})
+			% 	\\
+			% 	& = \text{const} + \sum_i 2 f_i \vec{\gamma}_i K \vec{\epsilon} + f_i^2 \vec{\epsilon} K \vec{\epsilon} - 2 f_i \ki \cdot \vec{\epsilon}
+			% \end{spalign}
+			% We can rewrite this as:
+			% \begin{spalign}
+			% 	\mathcal{L}^\prime & = \mathfrak{e} \vec{f}^2 + 2 \vec{f} \cdot \vec{\mathfrak{g}}
+			% 	\\
+			% 	\vec{f} & =  H \vec{c}(\vec{z}) + G \vec{p}^\text{blup}
+			% 	\\
+			% 	\mathfrak{e} & = \vec{\epsilon} \cdot K \vec{\epsilon}
+			% 	\\
+			% 	[\vec{\mathfrak{g}}]_i & = \left(K \gamma_i   - \vec{k}_i \right)\cdot \vec{\epsilon}
+			% \end{spalign}
+			% All these components -- aside from $\vec{f}$ -- can be precomputed, and so the MCMC routine requires only 2 matrix products, 2 dot products and however much computation is required to compute $\vec{c}(\vec{z})$ -- this is a significant improvement over the naive method. 
+
+			% \e
 \end{document}
