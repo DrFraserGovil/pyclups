@@ -1,55 +1,7 @@
-import pyclup
 import numpy as np
+from pyclup.constraint_vector import *
 ##things it should do: generate D, c, transforms
 ## validate data obeys assumptions of D?
-
-
-#private variables -- think about
-class ConstraintVector:
-
-	def __init__(self,constraintDimension,transform,transformDerivative,isConstant,isRevertible,inverter=None):
-		self.Dim = constraintDimension
-		self.zs = np.zeros((constraintDimension,1))
-		self.Transform= transform
-		self._Derivative = transformDerivative
-		self.Value = transform(self.zs)
-		self.Constant = isConstant
-		self.Revertible = isRevertible
-		self._Inverse = inverter
-		self.LowerBound = None
-		self.UpperBound = None
-	def Update(self,step):
-		self.zs += step
-		if self.LowerBound != None:
-			self.zs = np.maximum(self.zs,self.LowerBound)
-		if self.UpperBound != None:
-			self.zs = np.minimum(self.zs,self.UpperBound)
-		self.Value = self.Transform(self.zs)
-
-	def Invert(self,target):
-		self.zs = self._Inverse(target)
-		self.Value = self.Transform(self.zs)
-	def Derivative(self):
-		return self._Derivative(self.zs)
-class ConstantVector(ConstraintVector):
-	def __init__(self,values):
-		self.Dim = len(values)
-		self.Constant = True
-		self.Value = np.reshape(values,(len(values),1))
-
-class OptimiseVector(ConstraintVector):
-	def __init__(self,dimension,transform,transformDerivative,revert=False,revFunc=None):
-		self.Dim = dimension
-		self.zs = np.zeros((dimension,1))
-		self.Transform = transform
-		self._Derivative = transformDerivative
-		self.Constant = False
-		self.Revertible=revert
-		self.Value = self.Transform(self.zs)
-		self._Inverse = revFunc
-
-
-	
 
 
 class Constraint:
@@ -91,8 +43,8 @@ class Constraint:
 def Positive(n):
 	
 	c = OptimiseVector(n,lambda z: np.exp(z), lambda z: np.exp(z),True,lambda f: np.log(np.maximum(f,1e-9)))
-	c.LowerBound =-10
-	c.UpperBound = 10
+	c.LowerBound =-100
+	c.UpperBound = 100
 	D = np.eye(n)
 	return Constraint(vector=c,matrix=D)
 
@@ -117,3 +69,24 @@ def Monotonic(ts):
 		D[i,i+1] = 1
 	return Constraint(vector=c,matrix=D,validator=lambda a: np.all(a[:-1] <= a[1:]),vmessage="The monotonic constraint only works if the prediction points are sorted")
 
+def Even(ts):
+	
+	found = []
+	cvec = []
+	pairs = []
+	for i in range(len(ts)):
+		t = ts[i]
+		if i not in found and t != 0:
+			negloc = np.where( abs(ts +t) < 0.0001)[0]
+			if len(negloc) > 0:
+				found.append(i)
+				found.append(negloc[0])
+				cvec.append(0)
+				pairs.append([i,negloc[0]])
+	D = np.zeros((len(cvec),len(ts)))
+	for i in range(len(cvec)):
+		D[i,pairs[i][0]] = 1
+		D[i,pairs[i][1]] = -1
+	c = ConstantVector(cvec)
+
+	return Constraint(vector=c,matrix=D)

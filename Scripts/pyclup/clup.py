@@ -4,17 +4,17 @@ import numpy as np
 ##return only CLUP & RMS values? (can keep the BLUP and BLP for debugging purposes?)
 ## get the error range of the CLUP predictor to return as well
 ## predictor-error weighted RMS?
-class Prediction:
-	T = None
-	BLP = None
-	BLUP = None
-	CLUP = None
+# class Prediction:
+# 	T = None
+# 	BLP = None
+# 	BLUP = None
+# 	CLUP = None
 
-	def __init__(self,t,blp,blup,clup):
-		self.T = t
-		self.BLP = blp
-		self.BLUP = blup
-		self.CLUP = clup
+# 	def __init__(self,t,blp,blup,clup):
+# 		self.T = t
+# 		self.BLP = blp
+# 		self.BLUP = blup
+# 		self.CLUP = clup
 
 class CLUP:
 	trueFunc = None
@@ -23,7 +23,6 @@ class CLUP:
 		self.Kernel = kernel
 		self.Constraint = constraint
 		self.Basis = basis
-		self.BasisOrder = 5
 
 	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
 		self.Constraint.Validate(predictPoints)
@@ -47,7 +46,7 @@ class CLUP:
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 				self.p_clups[i] = ai.T@dataX
-		return Prediction(predictPoints,self.p_blps,self.p_blups,self.p_clups)
+		return pyclup.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
 	
 
 	def _InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
@@ -61,9 +60,9 @@ class CLUP:
 
 	
 		dx = np.array(dataX).reshape(-1,1)
-		self.Phi = np.zeros((self.BasisOrder+1,len(dataT)))
+		self.Phi = np.zeros((self.Basis.maxOrder+1,len(dataT)))
 		for i in range(len(dataT)):
-			for m in range(self.BasisOrder+1):
+			for m in range(self.Basis.maxOrder+1):
 				self.Phi[m,i] = self.Basis(m,dataT[i])
 
 		##scope for some fancy cholesky stuff here -- will do boring way first to get it working
@@ -93,7 +92,7 @@ class CLUP:
 			self.ks[i] = self.Kernel.Vector(dataT,predictPoints[i])
 
 			self.a_blps[i] = self.Kinv@self.ks[i]
-			phi = np.array([self.Basis(j,predictPoints[i]) for j in range(self.BasisOrder+1)]).reshape(-1,1)
+			phi = np.array([self.Basis(j,predictPoints[i]) for j in range(self.Basis.maxOrder+1)]).reshape(-1,1)
 			
 			
 			self.a_blups[i] = Delta.T@self.a_blps[i] + C@phi
@@ -119,7 +118,7 @@ class CLUP:
 		oldScore = 0
 		delta = 0
 		minScore = None
-		minC = None
+		minC = self.Constraint.c
 		minl = -1
 		for l in range(steps):
 			diff = self.DDtInv@(self.Constraint.c.Value - self.Dpblub)

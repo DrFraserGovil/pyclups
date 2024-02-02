@@ -7,6 +7,9 @@ from scipy import special
 import pyclup
 
 
+
+
+
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
@@ -20,19 +23,18 @@ top = 1
 tt =np.linspace(min(bottom,min(t)),max(top,max(t)),1000)
 K = pyclup.kernel.SquaredExponential(kernel_variance=2.5,kernel_scale=0.5)
 constraint = pyclup.constraint.Positive(len(tt))
-basis = lambda i,t : special.hermite(i,monic=True)(t)
+basis = pyclup.basis.Hermite(5)
 error_x = 0.1
 s = pyclup.clup.CLUP(K,constraint,basis)
-
-p = pyclup.Prediction(t,x,0.1)
 
 pred = s.Predict(tt,t,x,error_x)
 
 
 pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
 pt.scatter(t,x,label="Sampled Data")
-pt.plot(pred.T,pred.BLP,label="Prediction, \epsilon="+str(p.TrueError(f)))
-pt.plot(pred.T,pred.CLUP,label="Prediction, \epsilon="+str(p.TrueError(f)))
+eps = pred.TrueError(f)
+pt.plot(pred.T,pred.X_BLUP,label="BLUP $\epsilon=$"+str(pred.blup_error))
+pt.plot(pred.T,pred.X,label="CLUP $\epsilon=$"+str(eps))
 pt.legend()
 pt.draw()
 pt.pause(0.01)
