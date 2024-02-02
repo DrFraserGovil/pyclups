@@ -9,7 +9,7 @@ import pyclup
 
 
 
-
+np.random.seed(0)
 large_width = 400
 np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
@@ -20,9 +20,16 @@ def f(x):
 bottom = -1
 top = 1
 [t,x] = pyclup.GenerateData(n=40,mode="semi",xmax=top,xmin=bottom,noise=0.01,function=f)
-tt =np.linspace(min(bottom,min(t)),max(top,max(t)),1000)
+# tt =np.linspace(min(bottom,min(t)),max(top,max(t)),9)
+tt = np.linspace(bottom,top,199)
+print(tt)
 K = pyclup.kernel.SquaredExponential(kernel_variance=2.5,kernel_scale=0.5)
-constraint = pyclup.constraint.Positive(len(tt))
+
+
+constraint = pyclup.constraint.Positive(tt, lambda t: t < 0)
+constraint2 = pyclup.constraint.Positive(tt, lambda t: t > 0)
+constraint.Add(constraint2)
+
 basis = pyclup.basis.Hermite(5)
 error_x = 0.1
 s = pyclup.clup.CLUP(K,constraint,basis)

@@ -1,39 +1,25 @@
 import pyclup
 import numpy as np
 
-##return only CLUP & RMS values? (can keep the BLUP and BLP for debugging purposes?)
-## get the error range of the CLUP predictor to return as well
-## predictor-error weighted RMS?
-# class Prediction:
-# 	T = None
-# 	BLP = None
-# 	BLUP = None
-# 	CLUP = None
-
-# 	def __init__(self,t,blp,blup,clup):
-# 		self.T = t
-# 		self.BLP = blp
-# 		self.BLUP = blup
-# 		self.CLUP = clup
-
 class CLUP:
 	trueFunc = None
 	
 	def __init__(self,kernel,constraint,basis):
 		self.Kernel = kernel
-		self.Constraint = constraint
+		self.Constraints = constraint
 		self.Basis = basis
 
 	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
-		self.Constraint.Validate(predictPoints)
+		self.Constraints.Validate(predictPoints)
 
 
 		self._InitialiseComponents(predictPoints,dataT,dataX,errorX)
 
-		if self.Constraint.c.Constant:
+
+		if self.Constraints.IsConstant:
 			if np.shape(self.PseudoInv)!=(0,0):
 
-				corrector = self.PseudoInv@(self.Constraint.c.Value - self.Constraint.D@self.p_blups)				
+				corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)				
 				for i in range(len(predictPoints)):
 					ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 					self.p_clups[i] = ai.T@dataX
@@ -42,7 +28,7 @@ class CLUP:
 
 		else:
 			self._Optimise(predictPoints)
-			corrector = self.PseudoInv@(self.Constraint.c.Value - self.Constraint.D@self.p_blups)				
+			corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)				
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 				self.p_clups[i] = ai.T@dataX
@@ -85,8 +71,10 @@ class CLUP:
 
 		self.epsilon = 1.0/self.beta * self.delta
 
-		self.DDtInv = np.linalg.inv(self.Constraint.D@self.Constraint.D.T)
-		self.PseudoInv = self.Constraint.D.T @ self.DDtInv
+		D = self.Constraints.Matrix()
+
+		self.DDtInv = np.linalg.inv(D@D.T)
+		self.PseudoInv = D.T @ self.DDtInv
 
 		for i in range(len(predictPoints)):
 			self.ks[i] = self.Kernel.Vector(dataT,predictPoints[i])
@@ -100,17 +88,21 @@ class CLUP:
 			self.p_blps[i] = dx.T@self.a_blps[i]
 			self.p_blups[i] = dx.T@self.a_blups[i]
 
-		self.Dpblub = self.Constraint.D @ self.p_blups
+		self.Dpblub = self.Constraints.Matrix() @ self.p_blups
 		# print(np.shape(self.p_blups))
 
 	def _Optimise(self, predictPoints):
 
 
-		if self.Constraint.c.Revertible:
-			cT = self.Dpblub
-			self.Constraint.c.Invert(cT)
-		ms = np.zeros(shape=np.shape(self.Constraint.c.zs))
-		vs = np.zeros(shape=np.shape(self.Constraint.c.zs))
+		#find a good initial position
+
+		self.Constraints.InitialPosition(self.p_blups)
+
+		# if self.Constraints.c.Revertible:
+		# 	cT = self.Dpblub
+		# 	self.Constraints.c.Invert(cT)
+		ms = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
+		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
 		b2 = 0.999
 		steps = 3000
@@ -118,14 +110,14 @@ class CLUP:
 		oldScore = 0
 		delta = 0
 		minScore = None
-		minC = self.Constraint.c
+		minC = self.Constraints.Vector()[:]
 		minl = -1
 		for l in range(steps):
-			diff = self.DDtInv@(self.Constraint.c.Value - self.Dpblub)
+			diff = self.DDtInv@(self.Constraints.Vector() - self.Dpblub)
 
-			dcdz = self.Constraint.c.Derivative()
-			if np.shape(dcdz) == np.shape(diff):
-				grad = 2*np.multiply(dcdz,diff)
+			dcdz = self.Constraints.Derivative()
+			# if np.shape(dcdz) == np.shape(diff):
+			grad = 2*dcdz@diff
 			# print(l,"\n\tpos",self.Constraint.c.Value.T,"\n\tGrad",grad.T)
 
 			ms = b1 * ms + (1.0 - b1) * grad
@@ -136,10 +128,10 @@ class CLUP:
 			step = -1e-2*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
 
 			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
-			self.Constraint.c.Update(step)
+			self.Constraints.Update(step)
 
 			gNorm = np.linalg.norm(grad/len(ms))
-			if gNorm < 1e-4:
+			if gNorm < 1e-7:
 				mse = self._ComputeScore(predictPoints)
 				print("Reached gnorm at ",l,mse,gNorm)
 				break
@@ -150,18 +142,18 @@ class CLUP:
 				oldScore = mse
 				if minScore == None or mse < minScore:
 					minScore = mse
-					minC = self.Constraint.c
+					minC = self.Constraints.Vector()[:]
 					minl = l
-				print(l,gNorm,mse,q,delta)
+				# print(l,gNorm,mse,q,delta)
 				if (delta < 1e-6):
 					print("reached stability")
 					break
 		print("min c achieved at ",minl)
-		self.Constraint.c = minC
+		self.Constraints._TotalVector = minC
 			# print("\tnewpos",self.Constraint.c.Value.T)
 
 	def _ComputeScore(self,predictPoints):
-		corrector = self.PseudoInv@(self.Constraint.c.Value - self.Constraint.D@self.p_blups)	
+		corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)	
 		mse = 0			
 		for i in range(len(predictPoints)):
 			ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
