@@ -95,22 +95,23 @@ class CLUP:
 
 
 		#find a good initial position
-
+		
 		self.Constraints.InitialPosition(self.p_blups)
-
+		# return
+		# return
 		# if self.Constraints.c.Revertible:
 		# 	cT = self.Dpblub
 		# 	self.Constraints.c.Invert(cT)
 		ms = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
-		b2 = 0.999
-		steps = 3000
-
+		b2 = 0.99
+		steps = 1000
+		alpha = 0.1
 		oldScore = 0
 		delta = 0
-		minScore = None
-		minC = self.Constraints.Vector()[:]
+		minC = np.array(self.Constraints._OptimiseVector[:])
+		minScore = self._ComputeScore(predictPoints)
 		minl = -1
 		for l in range(steps):
 			diff = self.DDtInv@(self.Constraints.Vector() - self.Dpblub)
@@ -125,7 +126,7 @@ class CLUP:
 
 			c1 = 1.0/(1.0 - pow(b1,l+1))
 			c2 = 1.0/(1.0 - pow(b2,l+1))
-			step = -1e-2*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
+			step = -alpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
 
 			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
 			self.Constraints.Update(step)
@@ -142,14 +143,14 @@ class CLUP:
 				oldScore = mse
 				if minScore == None or mse < minScore:
 					minScore = mse
-					minC = self.Constraints.Vector()[:]
-					minl = l
+					minC = np.array(self.Constraints._OptimiseVector)
+					minl = l+1
 				# print(l,gNorm,mse,q,delta)
 				if (delta < 1e-6):
 					print("reached stability")
 					break
-		print("min c achieved at ",minl)
-		self.Constraints._TotalVector = minC
+		print("min c achieved at ",minl,minScore)
+		self.Constraints._OptimiseVector[:] = minC
 			# print("\tnewpos",self.Constraint.c.Value.T)
 
 	def _ComputeScore(self,predictPoints):

@@ -18,6 +18,8 @@ class Constraint:
 		self.IsConstant = True
 
 		self.Add(SubConstraint(**kwargs))
+
+
 	def Add(self,constraint):
 		if constraint.IsSub:
 			# print("adding")
@@ -42,16 +44,13 @@ class Constraint:
 				upper = self._OptimiserIndices[i][1]
 				zsMod = self._internalConstraints[i].Inverse(phi[lower:upper])
 				self._OptimiseVector[lower:upper] = zsMod
-
 	def _GenerateMatrix(self):
 		self._TotalMatrix = self._internalConstraints[0].Matrix
 		self._TotalBaseVector = self._internalConstraints[0].Vector.BaseValue
-		print(len(self._internalConstraints))
 		for i in range(1,len(self._internalConstraints)):
 			self._TotalMatrix = np.concatenate((self._TotalMatrix,self._internalConstraints[i].Matrix),0) 
 			self._TotalBaseVector = np.vstack((self._TotalBaseVector,self._internalConstraints[i].Vector.BaseValue))
 
-		print("Final",self._TotalMatrix)
 
 		self._OptimiseVector = np.zeros((self.TransformDimension,1))
 		self._OptimiserIndices = [None]*len(self._internalConstraints)
@@ -73,6 +72,8 @@ class Constraint:
 					lower = self._OptimiserIndices[i][0]
 					upper = self._OptimiserIndices[i][1]
 					dist = upper - lower
+
+					# self._OptimiseVector[start:start+dist] = self._internalConstraints[i].Vector.EnforceBounds(self._OptimiseVector[start:start+dist])
 					self._TotalVector[lower:upper] += self._internalConstraints[i].Transform(self._OptimiseVector[start:start+dist])
 					start = start + dist
 	def Vector(self):
@@ -90,10 +91,8 @@ class Constraint:
 
 			if not self._internalConstraints[i].IsConstant:
 				tdim = self._internalConstraints[i].TransformDimension
-				print(tstart,tdim,dstart,dim)
 				a = self._TotalDerivative[tstart:tstart+tdim]
 				# print(self._TotalDerivative[tstart:tstart+tdim][dstart:dstart+dim])
-				print(self._internalConstraints[i].Derivative(self._OptimiseVector[tstart:tstart+tdim]))
 				self._TotalDerivative[tstart:tstart+tdim,dstart:dstart+dim] += self._internalConstraints[i].Derivative(self._OptimiseVector[tstart:tstart+tdim])
 				
 				tstart += tdim
@@ -102,11 +101,7 @@ class Constraint:
 		return self._TotalDerivative
 	def Update(self,step):
 		self._OptimiseVector += step
-		# if self.LowerBound != None:
-		# 	self.zs = np.maximum(self.zs,self.LowerBound)
-		# if self.UpperBound != None:
-		# 	self.zs = np.minimum(self.zs,self.UpperBound)
-		# self.Value = self.Transform(self.zs)
+		
 
 	def Validate(self,predictT):
 
@@ -128,23 +123,67 @@ class Constraint:
 			raise ValueError(f"The transpose-product of the constraint matrix has a vanishing determinant. This is likely due to conflicting, simultaneous constraints.")
 
 
-def Positive(dataT,constraint=lambda t: [True]*len(t)):
+# def PositiveOnIndex(dataT,index):
+
+# 	##magic
 
 
-	meetConstraint = constraint(dataT)
-	nMeet = np.sum(meetConstraint)
-
-	vec = OptimiseVector(nMeet,nMeet,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs))
-	
-	
-	mat = np.zeros((nMeet,len(dataT)))
-
-	idx = 0
-	for i in range(len(dataT)):
-		if meetConstraint[i]:
-			mat[idx][i] = 1
-			idx+=1
-
+def GreaterThan(dataT,value):
+	n = len(dataT)
+	vec = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),value)
+	mat = np.eye(n)
 	con = Constraint(vector=vec,matrix=mat)
+	vec.SetWBounds(-10,10)
+	return con
 
+def LessThan(dataT,value):
+	n = len(dataT)
+	vec = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),value)
+	mat = -1.0 * np.eye(n)
+	con = Constraint(vector=vec,matrix=mat)
+	return con
+
+def Positive(dataT):
+	return GreaterThan(dataT,0)
+
+def Negative(dataT):
+	return LessThan(dataT,0)
+
+def Bounded(dataT,valueBelow,valueAbove):
+
+	n = len(dataT)
+	vec = OptimiseVector(n,n,lambda zs : valueAbove/(1.0 + np.exp(-zs)), lambda zs: valueAbove*np.exp(-zs)/(1 + np.exp(-zs))**2, lambda zs: -np.log( 1e-8+np.maximum(0,valueAbove/zs-1)),valueBelow)
+	mat = np.eye(n)
+	con = Constraint(vector=vec,matrix=mat)
+	return con
+
+def MonotonicIncreasing(dataT):
+
+	n = len(dataT)
+	sort = np.argsort(dataT)
+	vec = OptimiseVector(n-1,n-1,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs))
+
+	matrix = np.zeros((n-1,n))
+
+	for i in range(1,n):
+		lower = sort[i-1]
+		upper = sort[i]
+		matrix[i-1][lower] = -1
+		matrix[i-1][upper] = 1
+	
+	con = Constraint(vector=vec,matrix=matrix)
+	return con
+
+def Integrable(dataT,value):
+
+	n = len(dataT)
+
+	dx = dataT[1] - dataT[0]
+
+	vec = ConstantVector([value/dx])
+
+	matrix = np.ones((1,n))
+	matrix[0,0] = 0.5
+	matrix[0,-1] = 0.5
+	con = Constraint(vector=vec,matrix=matrix)
 	return con

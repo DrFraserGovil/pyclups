@@ -6,6 +6,7 @@ from pyclup.constraint_vector import *
 class SubConstraint:
 	IsSub = True
 	Matrix = None
+	
 	Vector = None
 	# Dimension = 0
 

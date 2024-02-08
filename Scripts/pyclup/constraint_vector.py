@@ -10,7 +10,15 @@ class ConstraintVector:
 		if self.IsConstant:
 			self.TransformDimension = 0
 		
-	
+	def EnforceBounds(self,zs):
+
+		if self.LowerBound is not None:
+			zs = np.maximum(zs,self.LowerBound)
+		if self.UpperBound is not None:
+			zs = np.minimum(zs,self.UpperBound)
+		return zs
+		# self.Value = self.Transform(self.zs)
+
 		# self.zs = np.zeros((constraintDimension,1))
 		# self.Transform= transform
 		# self._Derivative = transformDerivative
@@ -42,7 +50,14 @@ class ConstantVector(ConstraintVector):
 		self.BaseValue = np.reshape(values,(len(values),1))
 	# def Value(self):
 	# 	return self.BaseValue
+		
+
 class OptimiseVector(ConstraintVector):
+
+	def SetWBounds(self,lower=None,upper=None):
+
+		self.LowerBound = lower
+		self.UpperBound = upper
 	def __init__(self,dimension,transformDimension,transform,transformDerivative,inverseFunction,offset=None):
 		super().__init__(dimension,False)
 
@@ -50,12 +65,18 @@ class OptimiseVector(ConstraintVector):
 		self.Transform = transform
 		self.Derivative = transformDerivative
 		self.Inverse = inverseFunction
-		
-		if offset == None:
-			self.BaseValue = np.zeros((self.Dimension,1))
+		self.LowerBound = None
+		self.UpperBound = None
+		if offset is not None:
+			
+			if isinstance(offset,int) or isinstance(offset,float):
+				self.BaseValue = np.zeros((self.Dimension,1))+offset
+			else:
+				self.BaseValue = np.reshape(offset,(dimension,1))
 		else:
-			self.BaseValue = np.reshape(offset,(dimension,1))
-	
+			self.BaseValue = np.zeros((self.Dimension,1))
+		
+		# print(self.BaseValue,self.BaseValue.dtype)
 	# def Value(self,zs):
 	# 	return self.BaseValue + self.Transform(zs)
 
