@@ -1,5 +1,5 @@
 import numpy as np
-from pyclup.subconstraint import *
+from pyclup.constraint.subconstraint import *
 ##things it should do: generate D, c, transforms
 ## validate data obeys assumptions of D?
 
@@ -39,6 +39,7 @@ class Constraint:
 			if not self._internalConstraints[i].IsConstant:
 				lower = self._OptimiserIndices[i][0]
 				upper = self._OptimiserIndices[i][1]
+				print(phi[lower:upper])
 				zsMod = self._internalConstraints[i].Inverse(phi[lower:upper])
 				self._OptimiseVector[lower:upper] = zsMod
 	def _GenerateMatrix(self):
@@ -88,9 +89,7 @@ class Constraint:
 
 			if not self._internalConstraints[i].IsConstant:
 				tdim = self._internalConstraints[i].TransformDimension
-				a = self._TotalDerivative[tstart:tstart+tdim]
 				self._TotalDerivative[tstart:tstart+tdim,dstart:dstart+dim] += self._internalConstraints[i].Derivative(self._OptimiseVector[tstart:tstart+tdim])
-				
 				tstart += tdim
 
 			dstart += dim
@@ -122,34 +121,6 @@ class Constraint:
 		if abs(np.linalg.det(self._TotalMatrix@self._TotalMatrix.transpose())) < 1e-8:
 			raise ValueError(f"The transpose-product of the constraint matrix has a vanishing determinant. This is likely due to conflicting, simultaneous constraints.")
 
-
-# def PositiveOnIndex(dataT,index):
-
-# 	##magic
-		
-
-
-
-# def GreaterThan(dataT,value):
-# 	n = len(dataT)
-# 	vec = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),value)
-# 	mat = np.eye(n)
-# 	con = Constraint(vector=vec,matrix=mat)
-# 	vec.SetWBounds(-10,10)
-# 	return con
-
-def LessThan(dataT,value):
-	n = len(dataT)
-	vec = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),value)
-	mat = -1.0 * np.eye(n)
-	con = Constraint(vector=vec,matrix=mat)
-	return con
-
-# def Positive(dataT):
-# 	return GreaterThan(dataT,0)
-
-def Negative(dataT):
-	return LessThan(dataT,0)
 
 def Bounded(dataT,valueBelow,valueAbove):
 

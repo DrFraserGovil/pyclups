@@ -1,0 +1,128 @@
+\documentclass[]{article}
+\usepackage{JML}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{dsfont}
+\usepackage[left=1in,right=1in]{geometry}
+\title{Jack Thoughts}
+\setlength\parskip{5pt}
+\setlength\parindent{0pt}
+\def\llangle{\left\langle}
+\def\rrangle{\right\rangle}
+\newcommand\E[1]{\llangle #1 \rrangle}
+\usepackage{tikzsymbols}
+\newcommand\T[1][i]{\mathcal{T}_{#1}}
+\def\a{\vec{a}_t}
+\def\ai{\vec{a}_{t_i}}
+\def\vi{\vec{v}_i}
+\def\wi{\vec{w}}
+		
+\begin{document}
+	\maketitle
+
+	I like the newest version of the paper a lot! Much easier to read in some of the key areas. Here are some thoughts:
+
+	
+	\begin{enumerate}
+		\item I still don't like the name BSCLUP -- how about we meet halfway and go with CLUPS: \textit{Constrained Linear Unbiased Predictor-Sequences/Sets}? 
+		\item Footnote 1 has a question in it. (`random variables $X$ and $Y$ is CLUP thoughts'). Not sure I understand the question -- seems fine to end after $Y$?
+		\item The note about the BSCLP vs BSCLUP is very good -- I wonder if a similar note about the BLP is worthwhile at the start of Section 2 -- emphasising \textit{why} we care about this entity, something along the lines of:
+		
+		``The \textit{best linear predictor} (BLP) for $Z_t$ is the linear predictor $\hat{Z}_t^\text{BLUP}$ which minimises the MSE subject to no constraints, and therefore has the minimum MSE among all linear predictors. Mechanically, the derivation is similar to above, but with the important conceptual difference of using the second moment $R = ...$ instead of the covariance (right?)."
+		\item I think rewording the opening sentence of section 3 might place the emphasis more on what we are trying to do (and why it matters), something like:
+		
+		``In the BLP and BLUP, each prediction is treated as an individual point, distinct from all others. In practice, however, we are often interested in constructing sets and sequences of predictions upon which we might wish to impose constraints. In the case of a set of predictors, we might wish to impose upper or lower bounds, whilst in the case of a sequence we might wish to impose constraints between individual predictions such as monotonicity. Such sequence-constraints are non-separable since we cannot optimise one prediction without potentially impacting another in the sequence, and so we are moved to consider predictor-sequences as entities in their own right."
+		\item Worth noting in the BSCLUP /BSCLP note (which I like!) that the distinction is conceptual (moments vs covariances) as well?
+		\item Just before eq. 32, I think it is incorrect to say that we limit ourselves to the case of linear constraints to make the derivatives analytically (trivially not the case: quadratic constraints still have analytical derivatives!) it is that the derivatives can be \textit{analytically solved to produce Eq. 52} 
+		\item I have come up with a better way to say the bit about the KKT constraints:
+		
+		``Since there is no guarantee of convexity, standard approaches such as slack variables and the Karush-Kuhn-Tucker conditions are not always applicable. As a general solution we parameterize the constraints such that"
+
+		\item The text above Eq. 38 is weirdly archaic, try \textit{The random vector $X$ can be decomposed as in Eq. 8...}
+		\item I wrote down `should we maybe capitalise (In)Exact' -- make it an Important Property that draws the eye?
+		\item After the description of item 1 of the itemised list of ways the gradient can be 0, it might be useful to direct readers straight to remark 6:
+		``The first case holds.... (see Eq 40 \textbf{and remark 6})''?
+		\item In 3.1 (just before Eq. 57), you bother to remind me that $B$ is of size $q\times m$, but not what $q$ and $m$ are -- worthwhile doing so, to prevent me flicking backwards and forwards
+		\item I would say that the ending of the first part of 3.1 could be made more obvious if you explicitly listed the ways in which $BB^T$ can be rank deficient (as you do with the zero-gradient conditions):
+		
+		``If any two rows are linearly dependent (for example, if any two of $B_1, B_2$ and $B_3$ are equal) then $B$ is rank deficient and $BB^T$ is uninvertible. There are four possible causes of this behaviour
+		\begin{enumerate}
+			\item Contradictory constraints
+			\item Redundant Constraints
+			\item Excess constraints
+			\item Homonym Constraints (\textbf{name?})
+		\end{enumerate}
+		These first two causes indicate that the statistician has formulated their problem poorly, whilst the final two can arise even from well-formulated statements, and may require some cunning of the part of the statistician to rewrite their conditions in an appropriate fashion.''
+
+		\item I would maybe put the sums in `Contradictory Constraints' next to their text -- it reads a bit weirdly at the moment:
+		
+		``For example, we may not require that the sum of the elements of the BSCLUP be both zero ($\sum_i \hat{Z} = 0$) and one ($\sum_i \hat{Z} = 1$) since these are inconsistent.''
+
+		Follow that same pattern through the rest? Maybe just my personal preference
+
+		\item In `Excess Constraints' I would emphasise that this is not necessarily a `you gone messed up' problem -- it's obvious when expressed in this language that it fails, but not necessarily obvious that $>0$ and $\sum = 1$ should fail on these grounds. 
+		
+		\item `Other Constraints' -- don't like the name (I suggested homonyms above, and I will write a suggestion based on that name)
+		
+		``It is possible for $BB^T$ to be singular even when the constraints are well formed and neither contradictory, redundant nor in excess. This arises when the constraints are expressed as `homonyms' of a constraint which \textit{would} be contradictory or redundant - that is, a set of constraints $B_i = \sum_{j\neq i} \alpha_j B_j$ but $\vec{c}_i \neq \sum_{j\neq i} \alpha_j \vec{c}_j$, such that the constraint `sounds' the same, but has a different meaning.
+		
+		For example, we consider a BSCLUP of $m > 2$ elements, where the only constraint is that $0 \leq \hat{Z}_0 \leq 1$. In this case, it would be natural to write the $2\times m$ matrix $B$ as:
+		\begin{align}
+			\begin{split}
+				B &= \begin{pmatrix}
+					1 & 0 & \hdots & 0
+					\\
+					1 & 0 & \hdots & 0
+				\end{pmatrix}
+			\end{split}
+		\end{align}
+		And the associated $\vec{c}$ as
+		\begin{align}
+			\begin{split}
+				\vec{c}(\vec{w}) = \begin{pmatrix}
+					\exp(w_1)
+					\\
+					1 - \exp(w_2)
+				\end{pmatrix}
+			\end{split}
+		\end{align}
+	
+	This is a well formulated, valid constraint with fewer constraints than predictions - and yet it is clear that $BB^T$ is uninvertible. We can understand why this is by considering the invalid constraint $0 \leq Z_0 \leq -1$, the resulting $B^\prime$ and $\vec{c}^\prime$ are:
+	\begin{align}
+		% \begin{split}
+			B^\prime &= \begin{pmatrix}
+				1 & 0 & \hdots & 0
+				\\
+				1 & 0 & \hdots & 0
+			\end{pmatrix}
+			\\
+			\vec{c}^\prime(\vec{w})& = \begin{pmatrix}
+				\exp(w_1)
+				\\
+				-1 - \exp(w_2)
+			\end{pmatrix}
+		% \end{split}
+	\end{align}
+	We can see that the only difference between our valid and invalid constraints were encapsulated within $\vec{c}$. From the perspective of $BB^T$, both valid and invalid constraints are identical - thus we say that the valid constraint is a \textit{homonym} of the invalid constraint. 
+
+	In order to generate a valid $B$, it is necessary only to formulate $B$ and $\vec{c}$ in a way which breaks this relationship - one potential solution would be:
+	\begin{align}
+		B & = \begin{pmatrix}
+			1 & 0 & \hdots & 0
+		\end{pmatrix}
+		\\
+		\vec{c}(w) & = \begin{pmatrix}
+			\frac{1}{1 + \exp(-w)}
+		\end{pmatrix}
+	\end{align}
+
+	\item There is a block of text in the second paragraph of 4 -- the BSCLUP being of finite length = resolution dependent. I think this is way too important a facet of the theory to be put here (it has implications for the error bounds, for example) - I would suggest maybe giving it its own dedicated (sub)section earlier in the paper.
+	\item In Eq. 83 I think you actually want $t_i$ instead of $i$ -- you've implicitly assumed a) symmetry and b) ordering of the prediction points!
+	\item In these examples, is it worth explicitly writing how these $B$/$c$ combinations result in the constraint being obeyed? I think it's a bit opaque as to how 85 and 86 result in monotonicity, but if we added in a line which said:
+	\begin{equation}
+		\hat{Z}_i = \hat{Z}_{i-1} + e^{z_i}
+	\end{equation}
+	Then it might be obvious how to go from a to b.
+
+\end{enumerate}
+\end{document}

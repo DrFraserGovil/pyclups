@@ -28,14 +28,11 @@ error_x = 0.1
 K = pyclup.kernel.SquaredExponential(kernel_variance=2.5,kernel_scale=0.5)
 basis = pyclup.basis.Hermite(3)
 
-constraint = pyclup.constraint.GreaterThan(lambda ts: 0.25*ts +0.5, lambda ts: ts>0)
-constraint2 = pyclup.constraint.LessThan(lambda ts: 0.1*ts +0.1, lambda ts: ts<=0)
-constraint.Add(constraint2)
-
+constraint = pyclup.constraint.Bounded(lambda x: 0.1*np.abs(x) ,lambda x: -0.2*x+0.7)
 s = pyclup.clup.CLUP(K,constraint,basis)
 
 
-tt = np.linspace(bottom,top,190)
+tt = np.linspace(bottom,top,19)
 pred = s.Predict(tt,t,x,error_x)
 
 
