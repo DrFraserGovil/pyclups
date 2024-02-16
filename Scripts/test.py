@@ -19,20 +19,23 @@ def f(x):
 
 	# return 1.0/(1 + np.exp(-x*3))
 
+
 bottom = -2
 top = 2
 [t,x] = pyclup.GenerateData(n=40,mode="semi",xmax=top,xmin=bottom,noise=0.15,function=f)
-tt = np.linspace(bottom,top,1990)
 error_x = 0.1
 
 K = pyclup.kernel.SquaredExponential(kernel_variance=2.5,kernel_scale=0.5)
-constraint = pyclup.constraint.GreaterThan(tt,0)
-# constraint2 = pyclup.constraint.Positive(tt)
-
-# constraint.Add(constraint2)
-
 basis = pyclup.basis.Hermite(3)
+
+constraint = pyclup.constraint.GreaterThan(lambda ts: 0.25*ts +0.5, lambda ts: ts>0)
+constraint2 = pyclup.constraint.LessThan(lambda ts: 0.1*ts +0.1, lambda ts: ts<=0)
+constraint.Add(constraint2)
+
 s = pyclup.clup.CLUP(K,constraint,basis)
+
+
+tt = np.linspace(bottom,top,190)
 pred = s.Predict(tt,t,x,error_x)
 
 

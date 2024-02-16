@@ -12,7 +12,6 @@ class CLUP:
 	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
 		self.Constraints.Validate(predictPoints)
 
-
 		self._InitialiseComponents(predictPoints,dataT,dataX,errorX)
 
 

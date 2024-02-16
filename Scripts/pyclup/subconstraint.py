@@ -6,6 +6,7 @@ from pyclup.constraint_vector import *
 class SubConstraint:
 	IsSub = True
 	Matrix = None
+	Initialiser = lambda self,ts: None,None
 	
 	Vector = None
 	# Dimension = 0
@@ -21,21 +22,34 @@ class SubConstraint:
 				self.Matrix = value
 			elif key == "vector":
 				self.Vector = value
+
+			
 			elif key == "validator":
 				self.validator = value
 			elif key == "vmessage":
-				self.validateMessage = value	
+				self.validateMessage = value
+			elif key == "initialiser":
+				self.Initialiser = value
 			else:
 				raise KeyError("Unknown key (" + str(key) + ") passed to Constraint Interface")
 		self.IsConstant = self.Vector.IsConstant
 		self.Dimension = self.Vector.Dimension
 		self.TransformDimension = self.Vector.TransformDimension
 	
+	def InitialiseConstraint(self,ts):
+		v,m = self.Initialiser(ts)
+		if m is not None:
+			self.Vector = v
+			self.Matrix = m
+		self.IsConstant = self.Vector.IsConstant
+		self.Dimension = self.Vector.Dimension
+		self.TransformDimension = self.Vector.TransformDimension
+
+
 	def Transform(self,zs):
 		if self.Vector.IsConstant:
 			raise RuntimeError("Transform called on a constant constraint - something has gone wrong")
 		
-		# print("I transform",zs)
 		# print("into",self.Vector.Transform(zs))
 		return self.Vector.Transform(zs)
 	
