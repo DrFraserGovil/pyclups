@@ -4,19 +4,16 @@ from pyclup.constraint.vector import *
 #each subconstraint contains one matrix and one vector
 
 class SubConstraint:
-	IsSub = True
-	Matrix = None
-	Initialiser = lambda self,ts: None,None
-	
-	Vector = None
-	# Dimension = 0
+		
 
 	def __init__(self,**kwargs):
+		self.Initialiser = lambda self,ts: None,None
 		self.Matrix = np.zeros((0,0))
+		self.IsSub = True
 		self.Vector = ConstantVector([])
 		self.validator= lambda vals: True
 		self.validateMessage = ""
-
+		self.HasInitialiser = False
 		for key,value in kwargs.items():
 			if key == "matrix":
 				self.Matrix = value
@@ -29,6 +26,7 @@ class SubConstraint:
 			elif key == "vmessage":
 				self.validateMessage = value
 			elif key == "initialiser":
+				self.HasInitialiser = True
 				self.Initialiser = value
 			else:
 				raise KeyError("Unknown key (" + str(key) + ") passed to Constraint Interface")
@@ -37,8 +35,8 @@ class SubConstraint:
 		self.TransformDimension = self.Vector.TransformDimension
 	
 	def InitialiseConstraint(self,ts):
-		v,m = self.Initialiser(ts)
-		if m is not None:
+		if self.HasInitialiser:
+			v,m = self.Initialiser(ts)
 			self.Vector = v
 			self.Matrix = m
 		self.IsConstant = self.Vector.IsConstant

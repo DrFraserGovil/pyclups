@@ -105,19 +105,25 @@ class CLUP:
 		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
 		b2 = 0.99
-		steps = 1000
-		alpha = 0.1
+		steps = 3000
+		alpha = 0.2
 		oldScore = 0
 		delta = 0
 		minC = np.array(self.Constraints._OptimiseVector[:])
 		minScore = self._ComputeScore(predictPoints)
 		minl = -1
+		r = []
+		va = []
 		for l in range(steps):
+			# print(l,)
 			diff = self.DDtInv@(self.Constraints.Vector() - self.Dpblub)
 
 			dcdz = self.Constraints.Derivative()
-			# if np.shape(dcdz) == np.shape(diff):
+		
 			grad = 2*dcdz@diff
+			# print("c",self.Constraints.Vector().T)
+			# print("diff",diff.T)
+			# print("dcdz",dcdz)
 			# print(l,"\n\tpos",self.Constraint.c.Value.T,"\n\tGrad",grad.T)
 
 			ms = b1 * ms + (1.0 - b1) * grad
@@ -126,28 +132,45 @@ class CLUP:
 			c1 = 1.0/(1.0 - pow(b1,l+1))
 			c2 = 1.0/(1.0 - pow(b2,l+1))
 			step = -alpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
-
 			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
 			self.Constraints.Update(step)
 
 			gNorm = np.linalg.norm(grad/len(ms))
+
+
+			s = 0
+			pp = 0
+			for i in range(len(dcdz)):
+				v1 = dcdz[i,:]
+				n1 = np.linalg.norm(v1)
+				n2 = np.linalg.norm(diff)
+				if (n1 > 1e-2 and n2 > 1e-3):
+					s += np.dot(v1,diff)/(n1*n2)
+					pp+=1
+			if (s>0):
+				r.append(l)
+				va.append(s/(pp+1e-5))
 			if gNorm < 1e-7:
 				mse = self._ComputeScore(predictPoints)
 				print("Reached gnorm at ",l,mse,gNorm)
 				break
-			if l % 5 == 0:
+			if l % 1 == 0:
 				mse = self._ComputeScore(predictPoints)
 				q= abs(mse - oldScore)/(abs(mse)+1e-7)
 				delta = 0.3*delta + (1.0- 0.3)*q
 				oldScore = mse
+				# print(l,)
 				if minScore == None or mse < minScore:
 					minScore = mse
 					minC = np.array(self.Constraints._OptimiseVector)
 					minl = l+1
 				# print(l,gNorm,mse,q,delta)
-				if (delta < 1e-6):
-					print("reached stability")
+				# print(grad,step,self.Constraints._OptimiseVector)
+				if (delta < 1e-10):
+					print(f"reached stability, {delta}")
 					break
+		self.Angle = [r,va]
+		print("Average angle",s)
 		print("min c achieved at ",minl,minScore)
 		self.Constraints._OptimiseVector[:] = minC
 			# print("\tnewpos",self.Constraint.c.Value.T)
