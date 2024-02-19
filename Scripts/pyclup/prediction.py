@@ -2,14 +2,17 @@ import numpy as np
 
 
 class Prediction:
-	def __init__(self,t,p,efficiency,blup=None,blp=None):
+	def __init__(self,t,p,efficiency,blup=None,blp=None,errors=None):
 		self.T = t
 		self.X = np.reshape(p,(len(p),))
 		if type(blup) != type(None):
 			self.X_BLUP = np.reshape(blup,(len(blup),))
 		if type(blp) != type(None):
 			self.X_BLP = np.reshape(blp,(len(blp),))
+		if type(errors)!=type(None):
+			self.ErrorSample = errors
 		self.Efficiency = efficiency
+		
 
 	def TrueError(self,func):
 		trueX = func(self.T)

@@ -1,11 +1,10 @@
-#!/usr/bin/python3
+# !/usr/bin/python3
 import numpy as np
 from matplotlib import pyplot as pt
 from tqdm import tqdm
 import warnings
 from scipy import special
 import pyclup
-
 
 
 
@@ -23,7 +22,7 @@ def f(x):
 
 bottom = -3
 top = 3
-[t,x] = pyclup.GenerateData(n=20,mode="uniform",xmax=top,xmin=bottom,noise=0.05,function=f)
+[t,x] = pyclup.GenerateData(n=5,mode="uniform",xmax=top,xmin=bottom,noise=0.05,function=f)
 # t = [-3,0,3]
 # x = [1.1,2,0.5]
 error_x = 0.1
@@ -34,7 +33,7 @@ basis = pyclup.basis.Hermite(3)
 l1 = lambda x: 0.5*np.abs(x)-0.4
 l2 = lambda x: -0.2*x+0.3
 # tt = np.linspace(bottom,top,1+int((top-bottom)/0.1))
-tt = np.linspace(bottom,top,231)
+tt = np.linspace(bottom,top,5)
 constraint = pyclup.constraint.Positive()
 
 
@@ -49,11 +48,16 @@ pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
 pt.scatter(t,x,label="Sampled Data")
 
 # np.random.shuffle(tt)
-pred = s.Predict(tt,t,x,error_x)
+pred = s.Predict(tt,t,x,error_x,True)
 eps = pred.TrueError(f)
 sorter = np.argsort(pred.T)
 pt.plot(pred.T[sorter],pred.X_BLUP[sorter],label="BLUP $\epsilon=$"+str(pred.blup_error))
 pt.plot(pred.T[sorter],pred.X[sorter],label="CLUP $\epsilon=$"+str(eps))
+
+for j in range(2):
+	print(pred.ErrorSample[j])
+	pt.plot(pred.T[sorter],pred.ErrorSample[j][sorter])
+
 
 print("Func",np.trapz(f(tt),tt))
 print("BLUP",np.trapz(pred.X_BLUP,pred.T))

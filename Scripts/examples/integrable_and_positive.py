@@ -44,7 +44,7 @@ x = []
 error_x = 0.5
 
 K = pyclup.kernel.SquaredExponential(kernel_variance=0.5,kernel_scale=0.5)
-basis = pyclup.basis.Hermite(4)
+basis = pyclup.basis.Hermite(7)
 
 tt = np.linspace(bottom,top,310)
 

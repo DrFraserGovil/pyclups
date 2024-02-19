@@ -35,7 +35,7 @@ class GreaterThan(Constraint):
 		else:
 			vector = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),self.GreaterThan)
 		
-		vector.SetWBounds(-5,10)
+		# vector.SetWBounds(-10,10)
 		return vector,matrix
 
 class LessThan(Constraint):

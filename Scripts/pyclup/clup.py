@@ -1,5 +1,6 @@
 import pyclup
 import numpy as np
+import emcee
 class CLUP:
 	trueFunc = None
 	
@@ -28,10 +29,10 @@ class CLUP:
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 				self.p_clups[i] = ai.T@dataX
-
-		# if getErrors:
-
-		return pyclup.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
+		e = None
+		if getErrors:
+			e=self._Errors(predictPoints)
+		return pyclup.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps,e)
 	
 
 	def _InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
@@ -86,10 +87,12 @@ class CLUP:
 
 			self.p_blps[i] = dx.T@self.a_blps[i]
 			self.p_blups[i] = dx.T@self.a_blups[i]
-
+		self._X_data = dx
 		self.Dpblub = self.Constraints.Matrix() @ self.p_blups
-		# print(np.shape(self.p_blups))
 
+		self.MSE_Offset = 0
+		for i in range(len(dataT)):
+			self.MSE_Offset += self.Kernel(dataT[i],dataT[i])
 	def _Optimise(self, predictPoints):
 
 
@@ -109,24 +112,19 @@ class CLUP:
 		alpha = 0.01
 		oldScore = 0
 		delta = 0
-		minC = np.array(self.Constraints._OptimiseVector[:])
 		minScore = self._ComputeScore(predictPoints)
+		minC = np.array(self.Constraints._OptimiseVector[:])
 		minl = -1
 		currentAlpha = alpha
 		alphaTrigger = 0
 		r = []
 		va = []
 		for l in range(steps):
-			# print(l,)
 			diff = self.DDtInv@(self.Constraints.Vector() - self.Dpblub)
 
 			dcdz = self.Constraints.Derivative()
 		
 			grad = 2*dcdz@diff
-			# print("c",self.Constraints.Vector().T)
-			# print("diff",diff.T)
-			# print("dcdz",dcdz)
-			# print(l,"\n\tpos",self.Constraint.c.Value.T,"\n\tGrad",grad.T)
 
 			ms = b1 * ms + (1.0 - b1) * grad
 			vs = b2 * vs + (1.0 - b2)*np.multiply(grad,grad)
@@ -134,7 +132,6 @@ class CLUP:
 			c1 = 1.0/(1.0 - pow(b1,l+1))
 			c2 = 1.0/(1.0 - pow(b2,l+1))
 			step = -currentAlpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
-			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
 			self.Constraints.Update(step)
 
 			gNorm = np.linalg.norm(grad/len(ms))
@@ -163,13 +160,11 @@ class CLUP:
 				delta = dmem*delta + (1.0- dmem)*q
 				
 				
-				# print(l,)
 				if minScore == None or mse < minScore:
 					minScore = mse
 					minC = np.array(self.Constraints._OptimiseVector)
 					minl = l+1
 				# print(f"Step {l}, score {float(mse)}, best at {minl},{minScore}, gnorm is {gNorm}, {currentAlpha}, {alphaTrigger}")
-				# print(grad,step,self.Constraints._OptimiseVector)
 				if (delta < 1e-10):
 					print(f"Reached stability, {delta}")
 					break
@@ -188,16 +183,109 @@ class CLUP:
 		print("Best step was found at ",minl,minScore)
 		self.Angle = [r,va]
 		self.Constraints._OptimiseVector[:] = minC
-			# print("\tnewpos",self.Constraint.c.Value.T)
 
 	def _ComputeScore(self,predictPoints):
 		corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)	
 		mse = 0			
 		for i in range(len(predictPoints)):
 			ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
-			
-			mse += self.Kernel(predictPoints[i],predictPoints[i]) + ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
-		return mse
+			mse +=  ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
+		return mse + self.MSE_Offset
 	
 
-	# def _Errors(self):
+	def _ErrorScore(self,vector):
+		# print("Attempting a score",np.shape(vector))
+		vector = vector.reshape((len(vector),1))
+		vectordim = len(self._X_data)
+		nvecs = int(len(vector)/vectordim)
+		ps = np.zeros((nvecs,1))
+		start = 0
+		for i in range(nvecs):
+			a_blup = vector[start:start+vectordim]
+
+			ps[i] = a_blup.T @ self._X_data
+			start += vectordim
+
+		Bp = self.Constraints.Matrix()@ps
+		cMod = Bp - self.Constraints._TotalBaseVector
+		cMod[cMod<0] = 0
+
+		score = self.MSE_Offset
+		corrector = self.PseudoInv@(cMod - Bp)
+		start = 0
+		for i in range(nvecs):
+			a_blup = vector[start:start+vectordim]
+			ai = a_blup + corrector[i]/self.beta * self.delta
+			pi = ai.T@self._X_data
+			if (pi<-1e-8):
+				print("oh shit",score)
+				print(vector.T)
+				print("pi",pi)
+				r=z
+			score += ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
+			start += vectordim
+		# print(score)
+		if np.any(np.abs(vector) > 1e3):
+			return -999999999 
+		return -score
+	def _Errors(self,predictPoints):
+		vector = []
+		corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)	
+		for i in range(len(predictPoints)):
+			ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
+			if len(vector)==0:
+				vector = ai
+			else:	
+				vector = np.concatenate((vector,ai))
+		
+		
+		ndim = len(vector)
+		nwalkers= 3*ndim
+
+		startPos = np.tile(vector.T,(nwalkers,1))
+		noise = 0.00000001 * (np.random.random((nwalkers,ndim))-0.5)
+		startPos += noise
+		sampler = emcee.EnsembleSampler(nwalkers,ndim,lambda ps: self._ErrorScore(ps))
+		state = sampler.run_mcmc(startPos,5000,progress=True)
+		try:
+			tau = int(np.mean(np.mean(sampler.get_autocorr_time())))
+		except:
+			tau = 150
+		print(tau)
+		flat_samples = sampler.get_chain(discard=10*tau, thin=2*tau, flat=True)
+
+		print("I have",len(flat_samples))
+
+		# flat_samples = flat_samples[:3]
+		out = []
+		for j in range(len(flat_samples)):
+			vector = flat_samples[j]
+			vector = vector.reshape((len(vector),1))
+			print(np.shape(vector))
+			vectordim = len(self._X_data)
+			nvecs = int(len(vector)/vectordim)
+			ps = np.zeros((nvecs,1))
+			start = 0
+			for i in range(nvecs):
+				a_blup = vector[start:start+vectordim]
+
+				ps[i] = a_blup.T @ self._X_data
+				start += vectordim
+			print(ps.T)
+			Bp = self.Constraints.Matrix()@ps
+			cMod = Bp - self.Constraints._TotalBaseVector
+			cMod[cMod<0] = 0
+
+			corrector = self.PseudoInv@(cMod - Bp)
+			start = 0
+			for i in range(nvecs):
+				a_blup = vector[start:start+vectordim]
+				ai = a_blup + corrector[i]/self.beta * self.delta
+
+				pi = ai.T@self._X_data
+				print(i,ai,pi)
+				ps[i] = pi
+				start+=vectordim
+			# print(ps)
+			out.append(ps)
+		return out
