@@ -34,13 +34,15 @@ class Constraint:
 		cInit = self._TotalMatrix@pblups
 		phi = cInit - self._TotalBaseVector
 		phi[phi<0] = 1e-3
-
+		start = 0
 		for i in range(len(self._internalConstraints)):
+			dim = self._internalConstraints[i].Dimension
 			if not self._internalConstraints[i].IsConstant:
 				lower = self._OptimiserIndices[i][0]
 				upper = self._OptimiserIndices[i][1]
-				zsMod = self._internalConstraints[i].Inverse(phi[lower:upper])
+				zsMod = self._internalConstraints[i].Inverse(phi[start:start+dim])
 				self._OptimiseVector[lower:upper] = zsMod
+			start += dim
 	def _GenerateMatrix(self):
 		self._TotalMatrix = self._internalConstraints[0].Matrix
 		self._TotalBaseVector = self._internalConstraints[0].Vector.BaseValue

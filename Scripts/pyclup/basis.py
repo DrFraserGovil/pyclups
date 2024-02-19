@@ -3,13 +3,13 @@ import scipy as sp
 
 class Basis:
 
-	funcList = []
-	maxOrder = -1
-
+	
+	def __init__(self):
+		self.funcList = []
+		self.maxOrder = -1
 	def __call__(self, order,x): 
 		if order > self.maxOrder:
 			raise ValueError("Cannot exceed the basis order")
-		# print("outputting",order,self.funcList[order])
 		return self.funcList[order](x)
 	
 

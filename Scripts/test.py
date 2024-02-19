@@ -15,7 +15,7 @@ np.set_printoptions(linewidth=large_width)
 warnings.filterwarnings("ignore")
 
 def f(x):
-	var = 0.1
+	var = 0.2
 	return 1.0/np.sqrt(2*np.pi*var) * np.exp(-0.5*x*x/var)
 
 	# return 1.0/(1 + np.exp(-x*3))
@@ -34,8 +34,10 @@ basis = pyclup.basis.Hermite(3)
 l1 = lambda x: 0.5*np.abs(x)-0.4
 l2 = lambda x: -0.2*x+0.3
 # tt = np.linspace(bottom,top,1+int((top-bottom)/0.1))
-tt = np.linspace(bottom,top,131)
+tt = np.linspace(bottom,top,231)
 constraint = pyclup.constraint.Positive()
+
+
 s = pyclup.clup.CLUP(K,constraint,basis)
 
 

@@ -1,6 +1,5 @@
 import pyclup
 import numpy as np
-
 class CLUP:
 	trueFunc = None
 	
@@ -9,12 +8,10 @@ class CLUP:
 		self.Constraints = constraint
 		self.Basis = basis
 
-	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
+	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20,getErrors=False):
 		self.Constraints.Validate(predictPoints)
 
 		self._InitialiseComponents(predictPoints,dataT,dataX,errorX)
-
-		print(f"Prediction called,{len(dataT)}")
 		if self.Constraints.IsConstant:
 			if np.shape(self.PseudoInv)!=(0,0):
 
@@ -31,6 +28,9 @@ class CLUP:
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 				self.p_clups[i] = ai.T@dataX
+
+		# if getErrors:
+
 		return pyclup.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
 	
 
@@ -104,14 +104,16 @@ class CLUP:
 		ms = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
-		b2 = 0.99
+		b2 = 0.95
 		steps = 3000
-		alpha = 0.2
+		alpha = 0.01
 		oldScore = 0
 		delta = 0
 		minC = np.array(self.Constraints._OptimiseVector[:])
 		minScore = self._ComputeScore(predictPoints)
 		minl = -1
+		currentAlpha = alpha
+		alphaTrigger = 0
 		r = []
 		va = []
 		for l in range(steps):
@@ -131,7 +133,7 @@ class CLUP:
 
 			c1 = 1.0/(1.0 - pow(b1,l+1))
 			c2 = 1.0/(1.0 - pow(b2,l+1))
-			step = -alpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
+			step = -currentAlpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
 			# print("\tms=",ms.T,"\n\tvs=",vs.T,"\n\tstep=",step.T)
 			self.Constraints.Update(step)
 
@@ -157,21 +159,34 @@ class CLUP:
 			if l % 1 == 0:
 				mse = self._ComputeScore(predictPoints)
 				q= abs(mse - oldScore)/(abs(mse)+1e-7)
-				delta = 0.3*delta + (1.0- 0.3)*q
-				oldScore = mse
+				dmem = 0.9
+				delta = dmem*delta + (1.0- dmem)*q
+				
+				
 				# print(l,)
 				if minScore == None or mse < minScore:
 					minScore = mse
 					minC = np.array(self.Constraints._OptimiseVector)
 					minl = l+1
-				# print(l,gNorm,mse,q,delta)
+				# print(f"Step {l}, score {float(mse)}, best at {minl},{minScore}, gnorm is {gNorm}, {currentAlpha}, {alphaTrigger}")
 				# print(grad,step,self.Constraints._OptimiseVector)
 				if (delta < 1e-10):
-					print(f"reached stability, {delta}")
+					print(f"Reached stability, {delta}")
 					break
+			mse = self._ComputeScore(predictPoints)
+			if l > 5:
+				if mse > oldScore:
+					alphaTrigger += 2
+					if alphaTrigger > 50:
+						currentAlpha *= 0.9
+						alphaTrigger = 0
+				else:
+					alphaTrigger = max(0,alphaTrigger-1)
+					if alphaTrigger == 0:
+						currentAlpha = min(alpha,currentAlpha*1.01)
+			oldScore = mse
+		print("Best step was found at ",minl,minScore)
 		self.Angle = [r,va]
-		print("Average angle",s)
-		print("min c achieved at ",minl,minScore)
 		self.Constraints._OptimiseVector[:] = minC
 			# print("\tnewpos",self.Constraint.c.Value.T)
 
@@ -184,3 +199,5 @@ class CLUP:
 			mse += self.Kernel(predictPoints[i],predictPoints[i]) + ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
 		return mse
 	
+
+	# def _Errors(self):
