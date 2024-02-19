@@ -1,5 +1,6 @@
 .DS_Store
 .vscode/
+*/_build/*
 *.out
 *.pdf
 *.aux
