@@ -14,7 +14,7 @@ class CLUP:
 
 		self._InitialiseComponents(predictPoints,dataT,dataX,errorX)
 
-
+		print(f"Prediction called,{len(dataT)}")
 		if self.Constraints.IsConstant:
 			if np.shape(self.PseudoInv)!=(0,0):
 

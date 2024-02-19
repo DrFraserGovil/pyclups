@@ -101,7 +101,8 @@ class Constraint:
 		
 	
 	def Validate(self,predictT):
-
+		self.TransformDimension = 0
+		self.Dimension = 0
 		for i in range(len(self._internalConstraints)):
 			self._internalConstraints[i].InitialiseConstraint(predictT)
 			self.TransformDimension += self._internalConstraints[i].TransformDimension

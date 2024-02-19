@@ -35,8 +35,7 @@ l1 = lambda x: 0.5*np.abs(x)-0.4
 l2 = lambda x: -0.2*x+0.3
 # tt = np.linspace(bottom,top,1+int((top-bottom)/0.1))
 tt = np.linspace(bottom,top,131)
-constraint = pyclup.constraint.Even()
-constraint.Add(pyclup.constraint.Positive(lambda t: t < 0))
+constraint = pyclup.constraint.Positive()
 s = pyclup.clup.CLUP(K,constraint,basis)
 
 
