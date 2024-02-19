@@ -653,80 +653,47 @@
 
 
 
-			\newpage
-	\section{Prediction Errors}
+	
 
-		\subsection{Gaussian-Style Errors}
 
-			In this attempt, we try to derive the errors in the standard Bayesian-analysis way (c.f. Sivia, etc.).
+		% \subsection{Gaussian-Style Errors}
 
-			When we formulated our Lagrangian, \eref{E:GlobalLagrangian}, we note that we were performing the usual trick of optimising the \textit{logarithm} of the Lagrangian we were actually interested in:
-			\begin{equation}
-				L(\vec{\theta}) = e^{-\mathcal{L}(\vec{\theta})}
-			\end{equation}
-			By minimising $\mathcal{L}$, we were therefore maximising $L$. If we assume that -- even if it is non-Gaussian -- the structure of $\mathcal{L}$ is such that it is tightly peaked around the optimal value, we may approximate the behaviour around the peak by the second order Taylor expansion:
-			\begin{equation}
-				\mathcal{L} \approx \mathcal{L}_\text{opt} + \frac{1}{2}\vec{\theta}^T H \vec{\theta} \LLR L(\vec{\theta}) = L_0 e^{-\frac{1}{2}\vec{\theta}^T H \vec{\theta}}
-			\end{equation}
-			Where $H$ is the usual Hessian matrix:
-			\begin{equation}
-				H = \left. \pdiv{^2 \mathcal{L}}{\vec{\theta}^2} \right|_{\theta = \theta_\text{opt}}
-			\end{equation}
-			By comparison with a simple Gaussian, the 1-sigma error estimate is then:
-			\begin{equation}
-				\sigma_i = \frac{1}{\sqrt{H^{-1}_{ii}}}
-			\end{equation}
-			The error on the optimised value $\ai$ is therefore:
-			\begin{spalign}
-				\pdiv{^2\mathcal{L}}{\ai \partial \vec{a}_j} = K \delta_{ij} \LLR \sigma_{[\ai]_j} = \frac{1}{\sqrt{K^{-1}_{jj}}}
-			\end{spalign}
-			Therefore if we write $[\vec{\sigma}]_j = \frac{1}{\sqrt{K^{-1}_{jj}}}$, we have:
-			\begin{equation}
-				\ai = \ai^{\text{clup}} \pm \vec{\sigma}
-			\end{equation}
-			Hence:
-			\begin{spalign}
-				\hat{X}_i = \ai^{\text{clup}}\cdot \vec{X} \pm \vec{\sigma} \cdot \vec{X}
-			\end{spalign}
-			Notably, this is independent of $i$, which means that the error is constant across all points - we don't, for example, predict small errors when predicting a point close to one of our  observed sample points.
+		% 	In this attempt, we try to derive the errors in the standard Bayesian-analysis way (c.f. Sivia, etc.).
 
-		% \subsection{AG-Style Errors}
-
-		% 	Here we try to replicate the error analysis of Anscombe \& Gration. \textbf{However}, I note that A\&G switch to using Covariances rather than Second Moments in the BLUP -- does this matter for us?!
-
-		% 	In their notation, they have $\vec{r}(t)_i = \text{cov}(t,X_i)$ instead of $\vec{k}(t)_i = \text{mom}(t,X_i)$ - which I will maintain for now. 
-
-		% 	The MSE of the BLUP is:
+		% 	When we formulated our Lagrangian, \eref{E:GlobalLagrangian}, we note that we were performing the usual trick of optimising the \textit{logarithm} of the Lagrangian we were actually interested in:
 		% 	\begin{equation}
-				
+		% 		L(\vec{\theta}) = e^{-\mathcal{L}(\vec{\theta})}
 		% 	\end{equation}
+		% 	By minimising $\mathcal{L}$, we were therefore maximising $L$. If we assume that -- even if it is non-Gaussian -- the structure of $\mathcal{L}$ is such that it is tightly peaked around the optimal value, we may approximate the behaviour around the peak by the second order Taylor expansion:
+		% 	\begin{equation}
+		% 		\mathcal{L} \approx \mathcal{L}_\text{opt} + \frac{1}{2}\vec{\theta}^T H \vec{\theta} \LLR L(\vec{\theta}) = L_0 e^{-\frac{1}{2}\vec{\theta}^T H \vec{\theta}}
+		% 	\end{equation}
+		% 	Where $H$ is the usual Hessian matrix:
+		% 	\begin{equation}
+		% 		H = \left. \pdiv{^2 \mathcal{L}}{\vec{\theta}^2} \right|_{\theta = \theta_\text{opt}}
+		% 	\end{equation}
+		% 	By comparison with a simple Gaussian, the 1-sigma error estimate is then:
+		% 	\begin{equation}
+		% 		\sigma_i = \frac{1}{\sqrt{H^{-1}_{ii}}}
+		% 	\end{equation}
+		% 	The error on the optimised value $\ai$ is therefore:
+		% 	\begin{spalign}
+		% 		\pdiv{^2\mathcal{L}}{\ai \partial \vec{a}_j} = K \delta_{ij} \LLR \sigma_{[\ai]_j} = \frac{1}{\sqrt{K^{-1}_{jj}}}
+		% 	\end{spalign}
+		% 	Therefore if we write $[\vec{\sigma}]_j = \frac{1}{\sqrt{K^{-1}_{jj}}}$, we have:
+		% 	\begin{equation}
+		% 		\ai = \ai^{\text{clup}} \pm \vec{\sigma}
+		% 	\end{equation}
+		% 	Hence:
+		% 	\begin{spalign}
+		% 		\hat{X}_i = \ai^{\text{clup}}\cdot \vec{X} \pm \vec{\sigma} \cdot \vec{X}
+		% 	\end{spalign}
+		% 	Notably, this is independent of $i$, which means that the error is constant across all points - we don't, for example, predict small errors when predicting a point close to one of our  observed sample points.
 
-		\subsection{MCMC Errors}
-
-			I propose a different kind of error analysis, based on MCMC methods. The reasoning for this is that, by the nature of the kind of constraints we are trying to impose, it does not make sense to talk about the errors in each prediction as independent. This follows from our conversion from a local-MSE to the global Lagrangian: individual points might have a large individual error (i.e. a high-MSE), but which ensures a globally minimised error: does it make sense to assign this point a large error when it, in fact, cannot be moved without altering where every other point in the curve would be placed? 
-
-			In short: we are predicting \textit{curves} not points, and so it does not make sense to assign errors to individual points, but only to curves as a unit. 
-
-			The problem in doing so is that we need a set of parameters which can be varied in order to produce different values of $\mathcal{L}$, and hence compute the transition probabilities for the MCMC effort -- in the case of the optimised-CLUP (i.e. the monotonic constraint), we might naturally say that $\vec{c}$ is the obvious choice -- however this does not generalise to the exact-CLUP (i.e. the even or integrable), where we would have no functions to optimise -- it also suggests that the only source of error is in the optimisation - whereas `close but wrong' solutions should also arise in the BLP/BLUP/exact-CLUP case. 
-
-			We therefore suggest that the parameters to vary are the joint set $\vec{y} = (\vec{p}^\text{blup})$ - that is because this can define a unique predictor, through the following procedure:
-
-			\begin{enumerate}
-				\item Propose $\vec{p}_\text{blup}$
-				\item Segment the constraint into inexact ($\vec{c}^{(i)}$) and exact ($\vec{c}^(e)$)
-				\item Evaluate $D \vec{p}_\text{blup} = \tilde{c}$. 
-				\item Let $\vec{c}^\prime_i = \begin{cases} 
-					\tilde{c}_i & \text{if } \tilde{c}_i > m_i
-					\\
-					m_i & \text{else}
-				\end{cases}$
-				\item Set $\vec{a}_i^\text{blup-new} = \frac{p^\text{blup}}{p^\text{blup-old}} \vec{a}_i^\text{blup-old}$
-				\item Then:
-				$$ \ai^\text{clup} = \vec{a}_i^\text{blup-new} +  \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c}^\prime - D \vec{p}^\text{blup}\right)\right)\cdot \hat{e}_i}{\vec{X} \cdot K^{-1} \Delta\vec{X}} K^{-1} \Delta\vec{X}$$
-			\end{enumerate}
-			Step 4 is a quick-and-dirty mapping from a proposed curve to one which obeys the inexact constraints - recalling that our setup is such that we have formulated these constraints in terms of positive slack constraints: $g(\{p\}) \geq 0 \to g(\{p\}) = s^2$ -- in the case of `less than relations' ($g(\{p\})<0$) it is therefore important to formulate $D$ in terms of $-g$, such that it becomes a greater-than problem.
 
 
+
+			\newpage
 		\section{Initialisation}
 
 			In the case where $\vec{w}$ must be optimised, we must first choose an initial starting point, $\vec{w}_0$, for the starting optimisation. The closer this is to the optimal point, the quicker the optimiser will converge.
@@ -809,5 +776,109 @@
 			% \end{spalign}
 			% All these components -- aside from $\vec{f}$ -- can be precomputed, and so the MCMC routine requires only 2 matrix products, 2 dot products and however much computation is required to compute $\vec{c}(\vec{z})$ -- this is a significant improvement over the naive method. 
 
-			% \e
+		
+			\newpage
+			\section{Prediction Errors}
+		
+				\subsection{Why the BLUP Approach doesn't work}
+					
+					The approach in standard BLUP texts is to simply use that the prediction error is (approximately -- some assumptions needed if I recall?) equal to the MSE evaluated at the optimum.
+		
+					This, however, utilises the assumption that each of the prediction points is independent; an assumption that does not follow through with the BSCLUP. We have emphasised that the BSCLUP prediction is on the \textit{entire} sequence/series of points - and hence any associated error must be computed on a global scale. 
+		
+					Simply put, it does not make sense to think about the error associated with just one point, when moving that point might have an impact on subsequent points (i.e., it is \textit{impossible} to move a point upwards in a monotonic predictor-series if the subsequent point already has the same prediction value, as this would violate the constraint.) 
+					
+					This concern is not merely limited to the predictor-sequences, as predictor-series also violate the assumptions that allow the MSE to be used; a trivial example would be the error on a predictor-series constrained to be non-negative, but which is predicted to be equal to zero. It is evident that a symmetric error around $Z = 0$ would not be representative of the predictor error at that point.
+					
+					We must therefore lend slightly more care and attention to our errors.
+					
+				\subsection{The MCMC Approach}
+		
+					Errors on sequences naturally lend themselves to an MCMC-style approach, as this provides a natural way to explore the intercorrelation between the sequence/series.
+		
+					In an ideal scenario, we would simply vary the predictor values, $\{\hat{Z}_\text{clup}\}$, and use this to generate a score $\mathcal{L}$ which the MCMC engine could explore. This faces two major problems:
+					\begin{enumerate}
+						\item The score function $\mathcal{L}$ is expressed in terms of $\{{\vec{a}}\}$, but $\hat{Z}$ and $\vec{a}$ are related through a non-invertible dot-product.
+						\item With complex constraints, the majority of proposed variations to $\hat{Z}$ would be invalid, and hence the MCMC engine would not be able to produce a reliable chain.
+					\end{enumerate}
+		
+					We must therefore run the MCMC engine in $\vec{a}$-space; which has the unfortunate by-product of being much higher-dimensional, and therefore has a higher autocorrelation length. However, blindly proposing a new $\vec{a}$ falls afoul of point 2) raised above, namely that the majority of the time, the resulting predictions will not be valid. 
+		
+
+					I therefore propose 4 potential algorithms for generating a valid MCMC chain.
+
+					\subsubsection*{Algorithm 1: ``Fuck You, Markov, You Don't Know Me''}
+						
+						This algorithm is simple: any proposed $\{\vec{a}\}$ which violate the constraints is given a score of $-\infty$, and the rest is left up to the MCMC engine to handle. 
+
+						This \textit{might} work in some of the inequality cases -- it almost certainly won't work in exact constraints (i.e. the probability of the MCMC generating a curve with an integral equal to 1 (within machine precision) is vanishingly small).
+
+						I do not recommend this, but it is technically an option.
+
+					\subsubsection*{Algorithm 2: ``Exactitude''}
+
+						In this case, we treat the variation as happening on the space of $\{a_\text{nqblup} \}$ (nqBLUP = not-quite-best LUP, since we have varied it away from the optimum!). If the constraints were exact, then this is almost identical to simply varying the $\{\vec{a}\}$, you simply have to correct the predictor using the BSCLUP identity. If the constraints are inexact, then for each proposed $\{ a_\text{nqblup}\}$ we compute the exact value of $\vec{c}$ which optimises the predictor; we then have a means of associating a variational score to a predictor which is away from the mean, but which is guaranteed to obey the correct behaviour. 
+
+						This is probably the most theoretically justifiable algorithm; the variables within $\vec{w}$ were always a fiction and so 'optimising them away' to produce the 'optimised-variation' seems like the best approach. 
+
+						The downside is that -- aside from exact constraints and certain trivial cases -- this is computationally very costly, and will take a vast amount of computing power to produce meaningful results.
+						
+					\subsubsection*{Algorithm 3: ``Dual Variation''}
+
+						It is clear that the MCMC must vary $\vec{a}_\text{nqblup}$ in order to produce meaningful results - however, we might take objection to the optimisation of $\vec{w}$ which the ``Exactitude'' method - firstly on practical grounds, and secondly on the idea that we are explicitly varying \textit{away} from the optimum -- so why do we not also vary $\vec{w}$\footnote{I don't know if I believe this, but would be interested in some thoughts!}?
+
+						In this case, we form a composite vector $\{\vec{a}_\text{nqblup}, \vec{w}\}$ such that for each variation we can construct a $\vec{c}$, and then through the BSCLUP identity a $\vec{a}_\text{nqBSCLUP}$ and hence a score.
+
+						The downside of this is that:
+						\begin{itemize}
+							\item We might argue the opposite way and say that unoptimised $\vec{w}$ values are meaningless
+							\item This increases the number of dimensions (potentially up to twice as many), and so increases the autocorrelation time.
+						\end{itemize}
+
+					\subsubsection*{Algorithm 4: `Eh, Close Enough'}
+
+						This final algorithm works similarly to Algorithm 2, except that no direct optimisation is involved. After proposing a new $\{\vec{a_\text{nqblup}}\}$, you then perform the Initialisation Projection:
+
+						\begin{enumerate}
+							\item Compute $\vec{\hat{\vec{Z}}}^\text{nqblup}$ using the normal BLUP algorithm
+							\item Let $\tilde{\vec{c}} = B \vec{\hat{\vec{Z}}}^\text{nqblup} = \vec{\xi} + \tilde{{\varphi}}(\vec{w})$
+							\item Project onto the constraint-meeting surface:
+							$$ \varphi_j = \begin{cases} \tilde{\varphi}_j & \text{if } \tilde{\varphi}_j \geq 0
+								\\
+								0 & \text{else} \end{cases}$$
+							\item Then set $\vec{c}^\prime = \vec{\xi} + \vec{\varphi}$
+							\item Use $\{\vec{a}_\text{nqblup}\}$ and $\vec{c}^\prime$ to construct a $\{\vec{a}_\text{nqbsclup}\}$
+						\end{enumerate}
+
+						This guarantees that all proposed $\{\vec{Z}\}$ obey the constraints, however the projection performed is somewhat naive and may sometimes be far away from the optimum. 
+
+						However, since we are varying $\vec{a}_\text{nqblup}$ freely, it can move very far away from the optimum, and so it is possible to generate arbitrary constraint-obeying $\vec{a_\text{bsclup}}$ (i.e., although the projection of $\vec{a}_\text{blup}$ is not guaranteed to be near the optimum, if we set $\vec{a}_\text{nqblup} = \vec{a}_\text{bsclup}$, the projection would trivially be equal to $\vec{a}_\text{bsclup}$, and therefore small variations from this position will also be projected into small variations from the optimum.)
+
+						This has the benefit of being able to explore arbitrary predictors (given enough time), without producing too many additional dimensions -- the downside is that since the projections may make many $\vec{a}_\text{nqblup}$ produce the same $\vec{a}_\text{bsclup}$ (and hence the same score), the MCMC might think it has redundant dimensions, get confused, or otherwise have an excessively high autocorrelation time as it struggles to find which parameters are meaningful.
+					% \subsection{MCMC Errors}
+
+					% I propose a different kind of error analysis, based on MCMC methods. The reasoning for this is that, by the nature of the kind of constraints we are trying to impose, it does not make sense to talk about the errors in each prediction as independent. This follows from our conversion from a local-MSE to the global Lagrangian: individual points might have a large individual error (i.e. a high-MSE), but which ensures a globally minimised error: does it make sense to assign this point a large error when it, in fact, cannot be moved without altering where every other point in the curve would be placed? 
+		
+					% In short: we are predicting \textit{curves} not points, and so it does not make sense to assign errors to individual points, but only to curves as a unit. 
+		
+					% The problem in doing so is that we need a set of parameters which can be varied in order to produce different values of $\mathcal{L}$, and hence compute the transition probabilities for the MCMC effort -- in the case of the optimised-CLUP (i.e. the monotonic constraint), we might naturally say that $\vec{c}$ is the obvious choice -- however this does not generalise to the exact-CLUP (i.e. the even or integrable), where we would have no functions to optimise -- it also suggests that the only source of error is in the optimisation - whereas `close but wrong' solutions should also arise in the BLP/BLUP/exact-CLUP case. 
+		
+					% We therefore suggest that the parameters to vary are the joint set $\vec{y} = (\vec{p}^\text{blup})$ - that is because this can define a unique predictor, through the following procedure:
+		
+					% \begin{enumerate}
+					% 	\item Propose $\vec{p}_\text{blup}$
+					% 	\item Segment the constraint into inexact ($\vec{c}^{(i)}$) and exact ($\vec{c}^(e)$)
+					% 	\item Evaluate $D \vec{p}_\text{blup} = \tilde{c}$. 
+					% 	\item Let $\vec{c}^\prime_i = \begin{cases} 
+					% 		\tilde{c}_i & \text{if } \tilde{c}_i > m_i
+					% 		\\
+					% 		m_i & \text{else}
+					% 	\end{cases}$
+					% 	\item Set $\vec{a}_i^\text{blup-new} = \frac{p^\text{blup}}{p^\text{blup-old}} \vec{a}_i^\text{blup-old}$
+					% 	\item Then:
+					% 	$$ \ai^\text{clup} = \vec{a}_i^\text{blup-new} +  \frac{\left(D^T \left(D D^T \right)^{-1} \left(\vec{c}^\prime - D \vec{p}^\text{blup}\right)\right)\cdot \hat{e}_i}{\vec{X} \cdot K^{-1} \Delta\vec{X}} K^{-1} \Delta\vec{X}$$
+					% \end{enumerate}
+					% Step 4 is a quick-and-dirty mapping from a proposed curve to one which obeys the inexact constraints - recalling that our setup is such that we have formulated these constraints in terms of positive slack constraints: $g(\{p\}) \geq 0 \to g(\{p\}) = s^2$ -- in the case of `less than relations' ($g(\{p\})<0$) it is therefore important to formulate $D$ in terms of $-g$, such that it becomes a greater-than problem.
+		
+					
 \end{document}
