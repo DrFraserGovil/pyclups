@@ -1,4 +1,4 @@
-# !/usr/bin/python3
+#!/opt/homebrew/bin/python3
 import numpy as np
 from matplotlib import pyplot as pt
 from tqdm import tqdm
@@ -33,8 +33,7 @@ basis = pyclup.basis.Hermite(5)
 l1 = lambda x: 0.5*np.abs(x)-0.4
 l2 = lambda x: -0.2*x+0.3
 # tt = np.linspace(bottom,top,1+int((top-bottom)/0.1))
-tt = np.linspace(bottom,top,25)
-ttBig = np.linspace(bottom,top,200)
+tt = np.linspace(bottom,top,200)
 constraint = pyclup.constraint.Positive()
 s = pyclup.clup.CLUP(K,constraint,basis)
 
@@ -47,28 +46,15 @@ pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
 pt.scatter(t,x,label="Sampled Data")
 
 # np.random.shuffle(tt)
-pred = s.Predict(ttBig,t,x,error_x)
-pred2 = s.Predict(tt,t,x,error_x,True)
+pred = s.Predict(tt,t,x,error_x)
 eps = pred.TrueError(f)
 sorter = np.argsort(pred.T)
 
-if pred2.ErrorSample is not None:
-	N = min(1000,len(pred2.ErrorSample))
-	for j in range(N):
-		pt.plot(pred2.T,pred2.ErrorSample[j],color='r',alpha=0.01)
+
 
 pt.plot(pred.T[sorter],pred.X_BLUP[sorter],label="BLUP $\epsilon=$"+str(pred.blup_error))
-pt.plot(pred.T[sorter],pred.X_BLUP[sorter]+pred.blpE,'k')
-pt.plot(pred.T[sorter],pred.X_BLUP[sorter]-pred.blpE,'k')
 pt.plot(pred.T[sorter],pred.X[sorter],label="CLUP $\epsilon=$"+str(eps))
 
-
-
-
-print("Func",np.trapz(f(tt),tt))
-print("BLUP",np.trapz(pred.X_BLUP,pred.T))
-print("CLUP",np.trapz(pred.X,pred.T))
-print(pred.X[sorter])
 pt.legend()
 pt.draw()
 pt.pause(0.01)
