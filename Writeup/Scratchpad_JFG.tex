@@ -243,4 +243,36 @@
 				However, since we are varying $\vec{a}_\text{nqblup}$ freely, it can move very far away from the optimum, and so it is possible to generate arbitrary constraint-obeying $\vec{a_\text{bsclup}}$ (i.e., although the projection of $\vec{a}_\text{blup}$ is not guaranteed to be near the optimum, if we set $\vec{a}_\text{nqblup} = \vec{a}_\text{bsclup}$, the projection would trivially be equal to $\vec{a}_\text{bsclup}$, and therefore small variations from this position will also be projected into small variations from the optimum.)
 
 				This has the benefit of being able to explore arbitrary predictors (given enough time), without producing too many additional dimensions -- the downside is that since the projections may make many $\vec{a}_\text{nqblup}$ produce the same $\vec{a}_\text{bsclup}$ (and hence the same score), the MCMC might think it has redundant dimensions, get confused, or otherwise have an excessively high autocorrelation time as it struggles to find which parameters are meaningful.
+	\newpage
+	\section{Prediction Errors, Redux}
+
+		After attempting to generate a suitable MCMC chain using the above methodologies, it becomes clear rather quickly that the method will probably take a ludicrously long time to converge -- the dimensionality of the problem is equal to $m\times N$ where $m$ is the number of predictions and $N$ is the number of observables. 
+
+		This is because we limited ourselves to the theoretically more justifiable case of varying only $\vec{a}$, since we have no direct means of turning a set of $\vec{Z}$s into a MSE score. 
+		
+		\textit{Except we do}.
+
+		If we take the optimum $\vec{a}_\text{blup}$ and subject it to the constraint that $\vec{Z} = \vec{p}$, some proposed set of predictor points, then the CLUPS identity will act to project $\vec{a}_\text{blup}$ into the space where a) $\vec{Z}$ is equal to the desired value and b) the MSE is at a minimum for that desired prediction. Item b) is a corollary to the fact that our projection is a minimum-distance projection with the MSE as the measure.
+
+		I therefore propose an alternative MCMC mode where we perform the following algorithm:
+		\begin{enumerate}
+			\item Propose a set of predictions, $\vec{p}$
+			\item Via the Initialisation Projection, transform $\vec{p}$ into a constraint-obeying prediction. I.e. given a constraint matrix $B$ and a known vector-offset $\vec{\xi}$:
+			\begin{align} 
+				\vec{\phi} & = B \vec{p} - \vec{\xi}
+				\\
+				\psi_i & = \begin{cases} \phi_i &\text{if \textit{inexact} and } \phi_i > 0\\ 0 &\text{else} \end{cases}
+				\\
+				\vec{p}^\prime & = \vec{p} + B^T (BB^T)^{-1} \left(\vec{\xi} + \vec{\psi} - \vec{p} \right)
+			\end{align}
+			\item Perform a 'known predictor projection', using $B = I$ and $\vec{c} = \vec{p}^\prime$:
+			\begin{equation}
+				\vec{a}^\text{prop}_j = \vec{a}_j^\text{blup} + \frac{p^\prime_j - Z^\text{blup}_j}{\vec{D}^T K^{-1} \vec{X}} K^{-1} \vec{X}
+			\end{equation}
+			\item Compute the score:
+			\begin{equation}
+				\mathcal{L} = \sum_j \vec{a}^\text{prop}_j \cdot K \vec{a}^\text{prop}_j - 2 \vec{a}^\text{prop}_j \cdot \vec{k}_j
+			\end{equation}
+		\end{enumerate}
+		As discussed in the `eh close enough' algorithm, the naive projection necessarily means a level of degeneracy (multiple $\vec{p}$ produce the same $\vec{p}^\prime$) and does not produce the optimal $\vec{p}^\prime$ given a $\vec{p}$ -- however since we are varying $\vec{p}$ freely and applying the real $\mathcal{L}$, this is more of a computational limitation than a theoretical one.
 \end{document}

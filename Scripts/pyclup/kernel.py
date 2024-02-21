@@ -30,6 +30,7 @@ class Kernel:
 				out[i,j] = self(dataT[i],dataT[j])
 				
 				if i == j:
+					# out[i,j] = 1.0/data_variance[i]
 					out[i,j] += data_variance[i]
 				else:
 					out[j,i] = out[i,j]

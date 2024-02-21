@@ -9,9 +9,10 @@ class Prediction:
 			self.X_BLUP = np.reshape(blup,(len(blup),))
 		if type(blp) != type(None):
 			self.X_BLP = np.reshape(blp,(len(blp),))
-		if type(errors)!=type(None):
-			self.ErrorSample = errors
+		# if type(errors)!=type(None):
+		self.ErrorSample = errors
 		self.Efficiency = efficiency
+		self.blpE = None
 		
 
 	def TrueError(self,func):
