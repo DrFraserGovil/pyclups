@@ -28,7 +28,7 @@ top = 3
 error_x = 0.2
 
 K = pyclup.kernel.SquaredExponential(kernel_variance=0.5,kernel_scale=0.5)
-basis = pyclup.basis.Hermite(5)
+basis = pyclup.basis.Hermite(5,'even')
 
 l1 = lambda x: 0.5*np.abs(x)-0.4
 l2 = lambda x: -0.2*x+0.3
