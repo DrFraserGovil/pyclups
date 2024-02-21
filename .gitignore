@@ -1,4 +1,8 @@
+.DS_Store
+.vscode/
+*/_build/*
 *.out
+*.pdf
 *.aux
 *.bib
 *eps-converted-to.pdf

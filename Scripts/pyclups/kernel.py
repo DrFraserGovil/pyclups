@@ -1,8 +1,5 @@
-import pyclup 
+import pyclups 
 import numpy as np
-
-
-
 
 class Kernel:
 	def __init__(self,**kwargs):  
@@ -27,6 +24,7 @@ class Kernel:
 		return out
 	
 	def Matrix(self,dataT,data_variance):
+		## kernel matrix is equal to K^\prime = K + \sigma^2 I
 		out = np.zeros((len(dataT),len(dataT)))
 		for i in range(len(dataT)):
 			for j in range(i,len(dataT)):
@@ -41,7 +39,9 @@ class Kernel:
 def SquaredExponential(**kwargs):
 	sigma = 1
 	l0 = 1
-	sqex = lambda x, y,param : param[0] * np.exp(-(x - y)**2/(2*param[1]**2))  #the Kernel does currently construct this by default, but can't hurt to futureproof  it/make it explicit
+
+	#the Kernel does currently construct this by default, but can't hurt to futureproof  it/make it explicit
+	sqex = lambda x, y,param : param[0] * np.exp(-(x - y)**2/(2*param[1]**2))  
 	for key,value in kwargs.items():
 		if key == "kernel_variance":
 			sigma = value
