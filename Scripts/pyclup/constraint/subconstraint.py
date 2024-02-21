@@ -7,20 +7,18 @@ class SubConstraint:
 		
 
 	def __init__(self,**kwargs):
-		self.Initialiser = lambda self,ts: None,None
 		self.Matrix = np.zeros((0,0))
 		self.IsSub = True
 		self.Vector = ConstantVector([])
 		self.validator= lambda vals: True
 		self.validateMessage = ""
 		self.HasInitialiser = False
+		self.Initialiser = None
 		for key,value in kwargs.items():
 			if key == "matrix":
 				self.Matrix = value
 			elif key == "vector":
 				self.Vector = value
-
-			
 			elif key == "validator":
 				self.validator = value
 			elif key == "vmessage":
@@ -43,18 +41,14 @@ class SubConstraint:
 		self.Dimension = self.Vector.Dimension
 		self.TransformDimension = self.Vector.TransformDimension
 
-
 	def Transform(self,zs):
 		if self.Vector.IsConstant:
 			raise RuntimeError("Transform called on a constant constraint - something has gone wrong")
-		
-		# print("into",self.Vector.Transform(zs))
 		return self.Vector.Transform(zs)
 	
 	def Derivative(self,zs):
 		if self.Vector.IsConstant:
 			raise RuntimeError("Derivative called on a constant constraint - something has gone wrong")
-		# print(zs)
 		dcdz = self.Vector.Derivative(zs)
 		if np.shape(dcdz)==np.shape(zs):
 			dcdz = np.diag(np.reshape(dcdz,len(dcdz),))  #detects if the transform is using a simple separable derivative, converts to diag
