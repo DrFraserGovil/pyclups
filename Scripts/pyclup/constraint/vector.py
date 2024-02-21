@@ -17,40 +17,13 @@ class ConstraintVector:
 		if self.UpperBound is not None:
 			zs = np.minimum(zs,self.UpperBound)
 		return zs
-		# self.Value = self.Transform(self.zs)
-
-		# self.zs = np.zeros((constraintDimension,1))
-		# self.Transform= transform
-		# self._Derivative = transformDerivative
-		# self.Value = transform(self.zs)
-		# self.Constant = isConstant
-		# self.Revertible = isRevertible
-		# self._Inverse = inverter
-		# self.LowerBound = None
-		# self.UpperBound = None
-	# def Update(self,step):
-	# 	self.zs += step
-	# 	if self.LowerBound != None:
-	# 		self.zs = np.maximum(self.zs,self.LowerBound)
-	# 	if self.UpperBound != None:
-	# 		self.zs = np.minimum(self.zs,self.UpperBound)
-	# 	self.Value = self.Transform(self.zs)
-
-	# def Invert(self,target):
-	# 	self.zs = self._Inverse(target)
-	# 	self.Value = self.Transform(self.zs)
-	# def Derivative(self):
-	# 	return self._Derivative(self.zs)
-	
 
 
 class ConstantVector(ConstraintVector):
 	def __init__(self,values):
 		super().__init__(len(values),True)
 		self.BaseValue = np.reshape(values,(len(values),1))
-	# def Value(self):
-	# 	return self.BaseValue
-		
+
 
 class OptimiseVector(ConstraintVector):
 
@@ -68,15 +41,11 @@ class OptimiseVector(ConstraintVector):
 		self.LowerBound = None
 		self.UpperBound = None
 		if offset is not None:
-			
 			if isinstance(offset,int) or isinstance(offset,float):
 				self.BaseValue = np.zeros((self.Dimension,1))+offset
 			else:
 				self.BaseValue = np.reshape(offset,(dimension,1))
 		else:
 			self.BaseValue = np.zeros((self.Dimension,1))
-		
-		# print(self.BaseValue,self.BaseValue.dtype)
-	# def Value(self,zs):
-	# 	return self.BaseValue + self.Transform(zs)
+
 
