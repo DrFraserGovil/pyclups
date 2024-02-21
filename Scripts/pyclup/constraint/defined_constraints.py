@@ -1,10 +1,4 @@
 from pyclup.constraint.constraint_class import *
-# from pyclup.constraint
-# _vector import *
-
-# class CustomConstraint(pyclup.Constraint):
-# 	def __init__(self):
-
 
 class GreaterThan(Constraint):
 
@@ -17,6 +11,8 @@ class GreaterThan(Constraint):
 	def InitialiseConstraint(self,ts):
 		n = len(ts)
 		matrix = np.eye(n)
+		
+		#lets us apply the constraint on only parts of ts, according to a boolean function provided at construction
 		if self.Domain is not None:
 			if callable(self.Domain):
 				domainIdx = self.Domain(ts)
@@ -35,7 +31,7 @@ class GreaterThan(Constraint):
 		else:
 			vector = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),self.GreaterThan)
 		
-		# vector.SetWBounds(-10,10)
+		vector.SetWBounds(-10,10) #exponentials can get a bit tricky if you are not careful -- the derivative is equal to the exponential of w, so if w is too large or too small, the optimiser can go wrong (either not moving at all, or moving so quickly as to kill the momentum vectors)
 		return vector,matrix
 
 class LessThan(Constraint):
@@ -176,7 +172,7 @@ class Integrable(Constraint):
 			matrix[0,s[i]] += 0.5 * dx
 		vector = ConstantVector([self.Integral])
 		return vector,matrix
-import sys
+
 class PositiveIntegrable(Constraint):
 	def __init__(self,integral):
 		self.Integral = integral
@@ -191,26 +187,18 @@ class PositiveIntegrable(Constraint):
 		exper = exper.reshape((len(ws),1))
 		return exper
 	def deriv(self,ws):
-		# return 0
 		c = self.Vector()
 		c = c.reshape((len(c),))
 		a = c[0]
-		# print(a,c.T)
 
 		dcdw = np.zeros((self.TransformDimension,self.Dimension))
-		# print(c)
-		# print(ws)
 		for j in range(len(ws)):
 			dSdw = -1 * a* c[j] * self.Abscissa[j]
 			dcdw[j,:] +=dSdw
 			dcdw[j,j] += c[j]
-		# 	dcdw[i,:] = - a* c * self.Abscissa[i+1]
-		# 	dcdw[i,i+1] += c[i+1]
-		# print(dcdw)
-		# p = q
 		return dcdw
 	def invert(self,cs):
-		## technically this is not uniquely invertible, but for the sake of argument, I normalise it such that c[0] = 1, and then go from there. The degeneracy doesn't matter to the optimiser
+		## technically this is not uniquely invertible, but for the sake of argument, I normalise it such that c[0] = 1, and then go from there. The degeneracy doesn't matter to the optimiser -- this is only used for finding the initial position
 		exper = cs/cs[0]
 		exper[exper<1e-8] = 1e-8
 		return np.log(exper)
@@ -228,17 +216,7 @@ class PositiveIntegrable(Constraint):
 			self.Abscissa[i] += 0.5*dx
 			self.Abscissa[i-1] += 0.5*dx
 		vector = OptimiseVector(n,n,self.transform,self.deriv,self.invert)
-		# #have to do this a weird way in case the ts are not sorted and 
-		# #also no guarantee of equal domains, so we'll do it the dumb way
-		# matrix = np.zeros((1,n))
-		# for i in range(1,len(s)):
-		# 	lower = ts[s[i-1]]
-		# 	upper = ts[s[i]]
-		# 	dx = upper - lower
-		# 	matrix[0,s[i-1]] += 0.5 * dx
-		# 	matrix[0,s[i]] += 0.5 * dx
-		# vector = ConstantVector([self.Integral])
-		# vector.SetWBounds(-10,10)
+		vector.SetWBounds(-10,10)
 		return vector,matrix
 
 class Even(Constraint):
@@ -248,11 +226,14 @@ class Even(Constraint):
 
 	def InitialiseConstraint(self,ts):
 		n = len(ts)
-		
-		doubleCapture = np.min(np.diff(np.sort(ts+1)))/10 #makes it so that can capture things which are very close to opposite (but might not be equal due to floating point errors)
 		ts = ts.reshape(len(ts),1) #hack to make things into the right shape!
-		diffs = ts - self.Pivot
 		
+		#Floating point arithmetic might make us miss t_i = -t_j, so do some "closer than the smallest gap between values" trickery. 
+		# This might (technically) make a function non-even, since if the domain looks like [-10,-5,0,5.01,10], it would make it so that f(-5) = f(5.01)
+		# However, it is close enough that if you were using an even constraint on a domain like that, it really is your fault at that point!
+
+		doubleCapture = np.min(np.diff(np.sort(ts+1)))/10 
+		diffs = ts - self.Pivot
 		pairs = []
 		for i in range(len(diffs)):
 			if diffs[i] > 0:
