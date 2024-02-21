@@ -1,5 +1,5 @@
 import numpy as np
-from pyclup.constraint.subconstraint import *
+from pyclups.constraint.subconstraint import *
 
 class Constraint:
 	##constraint class is the user interface for constructing and applying prebuilt (and user-defined) constraints
@@ -23,7 +23,7 @@ class Constraint:
 		if constraint.IsSub:
 			self.Constraints.append(constraint)
 		else:
-			self.Constraints += constraint._internalConstraints
+			self.Constraints += constraint.Constraints
 		
 	def Matrix(self):
 		return self._TotalMatrix

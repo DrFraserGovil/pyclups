@@ -1,4 +1,4 @@
-from pyclup.constraint.constraint_class import *
+from pyclups.constraint.constraint_class import *
 
 class GreaterThan(Constraint):
 
@@ -231,8 +231,9 @@ class Even(Constraint):
 		#Floating point arithmetic might make us miss t_i = -t_j, so do some "closer than the smallest gap between values" trickery. 
 		# This might (technically) make a function non-even, since if the domain looks like [-10,-5,0,5.01,10], it would make it so that f(-5) = f(5.01)
 		# However, it is close enough that if you were using an even constraint on a domain like that, it really is your fault at that point!
-
-		doubleCapture = np.min(np.diff(np.sort(ts+1)))/10 
+		a = np.sort(ts+1)
+		diffs = np.diff(a,1,0)
+		doubleCapture = np.min(diffs)/10 
 		diffs = ts - self.Pivot
 		pairs = []
 		for i in range(len(diffs)):

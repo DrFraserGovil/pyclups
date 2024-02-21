@@ -4,7 +4,7 @@ from matplotlib import pyplot as pt
 from tqdm import tqdm
 import warnings
 from scipy import special
-import pyclup
+import pyclups
 
 
 
@@ -22,20 +22,17 @@ def f(x):
 
 bottom = -3
 top = 3
-[t,x] = pyclup.GenerateData(n=10,mode="uniform",xmax=top,xmin=bottom,noise=0.1,function=f)
+[t,x] = pyclups.GenerateData(n=10,mode="uniform",xmax=top,xmin=bottom,noise=0.1,function=f)
 # t = [-3,0,3]
 # x = [1.1,2,0.5]
 error_x = 0.2
 
-K = pyclup.kernel.SquaredExponential(kernel_variance=0.5,kernel_scale=0.5)
-basis = pyclup.basis.Hermite(5,'even')
+K = pyclups.kernel.SquaredExponential(kernel_variance=0.5,kernel_scale=0.5)
+basis = pyclups.basis.Hermite(5,'even')
 
-l1 = lambda x: 0.5*np.abs(x)-0.4
-l2 = lambda x: -0.2*x+0.3
-# tt = np.linspace(bottom,top,1+int((top-bottom)/0.1))
 tt = np.linspace(bottom,top,200)
-constraint = pyclup.constraint.Positive()
-s = pyclup.clup.CLUP(K,constraint,basis)
+constraint = pyclups.constraint.Positive()
+s = pyclups.Predictor(K,constraint,basis)
 
 
 

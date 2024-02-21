@@ -1,4 +1,4 @@
-import pyclup 
+import pyclups 
 import numpy as np
 
 class Kernel:

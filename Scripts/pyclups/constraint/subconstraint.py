@@ -1,5 +1,5 @@
 import numpy as np
-from pyclup.constraint.vector import *
+from pyclups.constraint.vector import *
 
 #each subconstraint contains one matrix and one vector
 

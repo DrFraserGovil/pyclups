@@ -1,8 +1,8 @@
-import pyclup
+import pyclups
 import numpy as np
 import emcee
 import random
-class CLUP:
+class Predictor:
 	trueFunc = None
 	
 	def __init__(self,kernel,constraint,basis):
@@ -30,7 +30,7 @@ class CLUP:
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
 				self.p_clups[i] = ai.T@dataX
-		return pyclup.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
+		return pyclups.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
 
 	def _InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
 		eX = np.array(errorX)
