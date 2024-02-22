@@ -1,8 +1,8 @@
-# pyclups: Constrained, Linear, Unbiased Predictor-Sequences
+# pyclups: CLUPS for Python
 
-`pyclups` is a Python module which allows one to construct and fit a CLUPS to a set of provided data, as described in *Fraser-Govil \& Gration (2024).
+`pyclups` is a Python module which allows one to construct and fit a CLUPS to a set of provided data, as described in *Fraser-Govil \& Gration (2024)*.
 
-The CLUPS is a modified form of the standard Best Linear (Unbiased) Predictor - the BL(U)P - which allows one to place firm constraints on the nature of the predictions, such as monotonicity, bounds, integral-norming and so on.
+The CLUPS (*Constrained Linear Unbiased Predictor Sequence*) is a modified form of the standard Best Linear (Unbiased) Predictor - the BL(U)P - which allows one to place firm constraints on the nature of the predictions, such as monotonicity, bounds, integral-norming and so on.
 
 ## Usage
 
