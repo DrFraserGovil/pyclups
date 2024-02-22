@@ -18,7 +18,6 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
-              'sphinx_rtd_theme'
 ]
 
 templates_path = ['_templates']
