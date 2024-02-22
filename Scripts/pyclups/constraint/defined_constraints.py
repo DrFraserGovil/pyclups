@@ -216,7 +216,7 @@ class PositiveIntegrable(Constraint):
 			self.Abscissa[i] += 0.5*dx
 			self.Abscissa[i-1] += 0.5*dx
 		vector = OptimiseVector(n,n,self.transform,self.deriv,self.invert)
-		vector.SetWBounds(-10,10)
+		# vector.SetWBounds(-10,10)
 		return vector,matrix
 
 class Even(Constraint):

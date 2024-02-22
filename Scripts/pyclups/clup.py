@@ -2,6 +2,7 @@ import pyclups
 import numpy as np
 import emcee
 import random
+from matplotlib import pyplot as pt
 class Predictor:
 	trueFunc = None
 	
@@ -112,6 +113,7 @@ class Predictor:
 		currentAlpha = alpha
 		alphaTrigger = 0
 		
+		
 		for l in range(steps):
 
 			#compute gradient
@@ -126,8 +128,7 @@ class Predictor:
 			c2 = 1.0/(1.0 - pow(b2,l+1))
 			step = -currentAlpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
 			self.Constraints.Update(step)
-
-
+			
 			#compute new score
 			mse = self._ComputeScore(predictPoints)
 			if minScore == None or mse < minScore:
@@ -147,8 +148,8 @@ class Predictor:
 				print(f"Convergence Criteria met: Gradient flat ({gNorm})")
 				break
 						
-			if (delta < 1e-10 and l > 20):
-				print(f"Convergence Criteria met: Function value stabile at, {mse}")
+			if (delta < 1e-10 and l > 120):
+				print(f"Convergence Criteria met: Function value stable at, {mse} with mean change {delta}")
 				break
 
 			## some extensions to the ADAM optimiser to make it take smaller steps when large oscillations
