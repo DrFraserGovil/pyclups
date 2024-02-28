@@ -82,6 +82,8 @@ class Constraint:
 					dist = upper - lower
 					
 					self._OptimiseVector[lower:upper] = self.Constraints[i].Vector.EnforceBounds(self._OptimiseVector[lower:upper])
+
+					
 					self._TotalVector[start:start+dim] += self.Constraints[i].Transform(self._OptimiseVector[lower:upper])
 				start = start + dim
 	

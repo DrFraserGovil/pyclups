@@ -16,7 +16,7 @@
 \def\ai{\vec{a}_{t_i}}
 \def\vi{\vec{v}_i}
 \def\wi{\vec{w}}
-		
+\usepackage{bbm}
 \begin{document}
 	\maketitle
 	\tableofcontents
@@ -275,4 +275,274 @@
 			\end{equation}
 		\end{enumerate}
 		As discussed in the `eh close enough' algorithm, the naive projection necessarily means a level of degeneracy (multiple $\vec{p}$ produce the same $\vec{p}^\prime$) and does not produce the optimal $\vec{p}^\prime$ given a $\vec{p}$ -- however since we are varying $\vec{p}$ freely and applying the real $\mathcal{L}$, this is more of a computational limitation than a theoretical one.
+
+	\newpage
+
+	\section{Some Whacky New Constraints}
+
+		A common complaint from Ol' Man Amery is that we should not wish some of our constraints to be quite as....judicious...in their cuts as they sometimes are. For example, the 'positive' constraint simply cuts the BLUP predictor off at $z = 0$.
+
+		If hard cuts are not what is desired, this implies that we have some intrinsic prior on the behaviour of the derivatives of the function and -- if that is the case -- we should therefore formulate some constraints which allow us to impose those priors on the predictor.
+
+		\subsection{First Derivative}
+
+			We have already made some moves to constrain the first order derivative with the monotonic constraint - this being the equivalent to the constraint that the derivative is everywhere positive. 
+
+			The first-order gradient computed via forward-difference methods\footnote{Normally central difference is better - but that's for evaluating the gradient at a specific point -- what we're doing is (functionally) constraining the gradient between points, so feels like forward differences is more honest, right? I think it all comes out in the wash anyway.} is $\delta z_i = \frac{1}{t_{i+1} - t_i} \left(z_{i+1} - z_i \right)$, and so the matrix is therefore given by:
+			\begin{equation}
+				B^{(1)}_{ij}  = \delta_{i,j-1} - \delta_{ij}
+			\end{equation}
+			The matrix $B$ has size $N-1\times N$ - one degree of freedom remains. We have elected to keep the $\delta t$ out of the matrix since matrices with integer elements will be more numerically stable than those with elements of size $\delta t \ll 0$.
+
+			Constraining the derivative now amounts to finding suitable values for $\vec{c}$.
+
+			\subsubsection{Greater/Less Than}
+
+				The case of single-sided bounds is trivial, and functionally identical to the monotonic constraint. Less Than constraints differ from greater than only by a multiplication by $-1$, and so we focus only on greater than. 
+
+				If the gradient at $t = t_i$ must be greater than a value $d_i$, then (recalling that we are formulating $\vec{c}$ in terms of constant $\vec{\xi}$ and the function $\psi$):
+				\begin{align}
+					\xi_i &  = \delta t_i \times d_i
+					\\
+					[\psi(\vec{w})]_i & = \delta t_i \exp(w_i)
+				\end{align}
+				The vector $\vec{w}$ therefore trivially has dimensions $N-1$.
+
+			\subsubsection{Bounded Between}
+
+				The GT/LT cases amount to little more than extreme cases of monotonicity - perhaps a more interesting case is one where the gradient is bounded between two values $\ell_i$ and $u_i$ (especially where those values permit both negative and positive gradients).
+
+
+				In this case, we have:
+				\begin{align}
+					\xi_i &  = \delta t_i \times \ell_i
+					\\
+					[\psi(\vec{w})]_i & = \delta t_i \frac{u_i - \ell_i}{1 + \exp(-w_i)}
+				\end{align}
+
+		
+				
+				
+
+			\subsubsection{Bounded Outside}
+
+				If we had a case where the gradient was $\delta z_i \geq u_i \cup \delta z_i \leq \ell_i$, I do not think this is the kind of constraint that we can reasonably manage.
+
+				Two potential arguments (which I think amount to the same thing) for why this doesn't work:
+
+				\begin{itemize}
+					\item Concatenating constraints is  an AND operation. I do not think it is possible to formulate an equivalent OR in linear terms. That is because the constraint would functionally end up constraining $\left| \delta z_i - \frac{u_i - \ell_i}{2} \right|$, and the absolute value function is non-linear.
+					\item We cannot formulate a continuous transformation $\psi(w)$ which would allow us to explore this space meaningfully. 
+				\end{itemize}
+
+
+			\subsubsection{Positive AND Bounded Constraint}
+
+				Since constraining the gradient requires $N-1$ constraints for $N$ predictors, we cannot simply concatenate $B^{(1)}$ and $B^{\text{positive}}$ - this is a case which requires 'cunning'
+
+				Constrainting the GT/LT or the Bounded-Between where $\text{sign}(\ell_i) = \text{sign}(u_i)$ case is simple - we only need to ensure that the first element (for monotonically increasing) or the final point (for monotonically decreasing) is greater than zero. This is, in fact, a simple case of concatenating a single positivity constraint on the relevant endpoint. 
+
+				In the Bounded-Between case where $\ell_i$ and $u_i$ are of different signs (and hence the function is non-monotonic), things are more complex. It might be tempting to constraint the point $t_\text{extreme-blup}$, the smallest value of the BLUP predictor, however this is unworkable for a number of reasons (it has no guarantees of global enforcement).
+
+				Instead, we constrain things as the following:
+				\begin{align}
+					B^{(1)+positive}_{ij} & = \mathds{1}_{N}
+						\\
+						\xi_i & = 0
+						\\
+						[\psi(\vec{w})]_i & = \begin{cases} \exp(w_{0})  & i = 0
+							\\
+							\mathfrak{l}_i + \frac{\mathfrak{u}_i - \mathfrak{l}_i}{1 + \exp(-w_i)} & \text{else}
+							\end{cases}
+						\\
+						\mathfrak{u}_i & = u_i\delta t_i -\xi_i+ [\psi(\vec{w})]_{i-1}
+						\\
+						\mathfrak{l}_i & = \text{max}\left(0,{\ell_i \delta t_i} - \xi_i+ [\psi(\vec{w})]_{i-1} \right)
+				\end{align}
+				This is now an $N\times N$, fully constrained matrix and $\vec{w}$ is similarly $N$-dimensional. The transform is highly non-linear (and the derivatives will be unpleasant \& probably highly volatile!), but the constraint itself remains linear.
+
+		
+				\subsubsection{Computing the Derivatives}
+
+					Perhaps the most unappealing part of this formulation is the necessity of computing the derivatives of $\vec{c}$ with respect to $\vec{w}$:
+
+					\begin{equation}
+						\div{\psi_i}{w_j} = \begin{cases} 
+						\pdiv{\psi_j}{w_j} \prod_{k = j+1}^i \div{\psi_k}{\psi_{k-1}} & j \leq i
+						\\
+						0 & j > i
+					 \end{cases}
+					\end{equation}
+					The components of this derivative can be found:
+					\begin{align}
+						\div{\psi_i}{w_i} &= \begin{cases} \exp(w_i) & i = 0 
+							\\
+							\frac{\mathfrak{u}_i - \mathfrak{l}_i}{(1 + \exp(-w_i))^2} \exp(-w_i) & \text{else}\end{cases}
+							\\
+							\begin{split}
+							\div{\psi_{k}}{\psi_{k-1}} & = \pdiv{\psi_k}{\mathfrak{u}_k} \div{\mathfrak{u_k}}{\psi_{k-1}} + \pdiv{\psi_k}{\mathfrak{l}_k} \div{\mathfrak{l}_k}{\psi_{k-1}}
+							\\
+							& = \begin{cases}
+								1 & \mathfrak{l}_k > 0
+								\\
+								\frac{1}{1 + e^{-w_{k}}} & \text{else}
+							\end{cases}
+							\end{split}
+					\end{align}
+		\subsection{Second Derivative}
+
+			The second derivative case follows a fairly similar line of reasoning. The second derivative matrix is:
+			
+			\begin{equation}
+				B^{(2)}_{ij} = \delta_{ij} + \delta_{i,j-2} - 2 \delta_{i,j-1}
+			\end{equation}
+
+			From here, the individual constraints -- greater than, less than and bounded-between are identical to the first derivative case, except that the relevant vectors have dimension $N-2$.
+
+			\subsubsection{Positive \& Second Derivative}
+
+				Positivity is much harder to enforce in the case of the second derivative where the values are constrained to be $\ell < 0 < u$- this is because the associated transform is significantly more complex - if a curve approaches $z = 0$, truncating the value at 0 (as was done in the first derivative case) results in a discontinuous derivative, and hence (highly likely) violates the second derivative bounds - in addition, since the gradient can fluctuate to be both positive and negative, there are many potential 'points of contact' with the line $z = 0$, and so great care must be taken with the transform. 
+				
+				We propose the following parameterisation which ensures that for a given position vector $\vec{w}$, the resulting curve $\vec{z}_{\vec{w}}(t)$ obeys the constraints.
+
+				\begin{align}
+					z_0 & = \exp(w_0)
+					\\
+					z_1 & = F(z_0,u \delta t^2) + \exp(w_1)
+					\\
+					z_i & = S(w_i,z_{i-2},z_{i-1},\ell\delta t^2,u\delta t^2) 
+					\\
+					F(z,d) & = z + d - \sqrt{d^2 + 2 d u}
+					\\
+					S(w,a,b,\ell^\prime,u^\prime) & = \mathfrak{l}(a,b,\ell^\prime,u^\prime) + \frac{\mathfrak{u}(a,b,u^\prime) - \mathfrak{l}(a,b,\ell^\prime,u^\prime)}{1 + \exp(-w)} 
+					\\
+					\mathfrak{u}(a,b,u^\prime) & = u^\prime + 2 b - a
+					\\
+					\mathfrak{l}(a,b,\ell^\prime,u^\prime) & = \text{max}\left(0,F(b,u^\prime), \ell^\prime + 2 b - a \right)
+				\end{align}
+
+				To explain:
+				\begin{itemize}
+					\item Under normal circumstances, if $z_{i-2}$ and $z_{i-1}$ are known, then, from the finite differences method for the second derivative:
+					\begin{equation}
+						\ell \leq \frac{z_i - 2 z_{i-1} + z_{i-2}}{\delta t^2} \leq u ~~~\Longrightarrow~~~\ell \delta t^2 + 2z_{i-1} - z_{i-2} \leq z_i \leq u\delta t^2 + 2z_{i-1} - z_{i-2} 
+					\end{equation}
+					The $S(w,z_{i-2},z_{i-1},l,u)$ function then acts to interpolate the value of $z_i$ between these two extremes, based on the value of $w$. The $\mathfrak{u}$ function simply computes the upper permitted bounds, for example.
+					\item There are, however, two circumstances where this would cause a violation of our constraints:
+					\begin{enumerate}
+						\item If $z_i < 0$, we violate positivity
+						
+						Solution: the lower bound, $\mathfrak{l}$ can never be lower than 0:
+						\begin{equation}
+							\mathfrak{l} = \text{max}(0,\ell \delta t^2 + 2z_{i-1} - z_{i-2} )
+						\end{equation}
+						\item If $z_i < z_{i-1}$ by too much, then (since the gradient cannot increase by more than $u$), it becomes inevitable that the curve will intersect with $z = 0$ unless the $\pdiv{^2 z}{t^2} > u$ - and so when the truncation (see point i)) occurs, we violate our second derivative constraint.
+						
+						Solution: the lower bound, $\mathfrak{l}$ can never be lower than this 'point of no return' (PoNR). The PoNR can be found by computing the intersection of the quadratic curve $z = \frac{u}{2}(t - d)^2 + c$ (a quadratic with constant second derivative $u$). The value of $d$ can be determined by requiring that the gradient at $t = t_i$ is equal to $\frac{z_i - z_{i-1}}{\delta t}$, and the value of $c$ by requiring that the value of the function at $t = t_i$ is equal to $z_i$.
+
+						The PoNR occurs when $c < 0$, which can be shown to occur when $z_i = z_{i-1} + u \delta t^2 - \sqrt{u^2 \delta t^4 + 2 z_{i-1} u \delta t^2} = F(z_{i-1},u \delta t^2)$. We see therefore that the function $F$ is therefore the PoNR function. We note that $0 \leq F(z_{i-1},a) < z_{i-1}$ (and is guaranteed to exist, since $z_{i-1} \geq 0$ and $u > 0$).
+
+						Therefore:
+						\begin{equation}
+							\mathfrak{l} = \text{max}(0,F(z_i-1,u \delta t^2),\ell \delta t^2 + 2z_{i-1} - z_{i-2} )
+						\end{equation}
+						This is the definition given above. We also note that must also ensure that $z_1$ (which is otherwise unconstrained) does not pass this point - the parameterisation given permits it to have any value greater than the PoNR.
+
+						One point to note is that the 'Point of No Return' is computed assuming a continuous forward projection - even though our sampling is necessarily on a finite grid. It might be possible that there would be no negative value predicted for some $0 < F(z,u^\prime) - \mathfrak{l} < \epsilon \ll 1$ as the prediction points fall either side of the minimum, however computing this would be costly and so it is easier to simply assume the continuous projection. Secondly, we also assume that the forward projection is infinite - there is no computation of if $d > t \forall t \in T^\prime$. This is again for ease of use, but does prohibit this method from predicting \textit{all} positive curves with bounded second derivatives \textit{on the specified domain} (the space is instead curves which are positive and have bounded second derivatives across the infinite domain).
+					\end{enumerate}
+				\end{itemize}
+
+			\subsection{Monotonic \& Bounded Second Derivative}
+
+				Given that the monotonicity constraint is more involved than positivity, it might initially seem that this constraint would be significantly more complex. However, it turns out that monotonicity in fact makes things considerably easier. The case where $l$ and $u$ have the same sign are trivial (they inherently imply monotonicity) - we now consider the case where $l < 0 < u$ and the function is monotonically increasing.
+
+				We write our prediction points as:
+				\begin{equation}
+					z_i = z_{i-1} + q_i(w_i)
+				\end{equation}
+				The monotonicity constraint is that $q_i > 0$. In this case, the bounded gradient constraint reduces to:
+				\begin{equation}
+					l \leq \frac{z_{i} - 2 z_{i-1} + z_{i-2}}{\delta t^2} \leq u ~~~\Longrightarrow ~~~ l \delta t^2 + q_{i-1} \leq q_i \leq u \delta t^2 + q_{i-1}
+				\end{equation}
+				Recall that we require $q_i > 0$, so we add a truncation term:
+				\begin{equation}
+					\text{max}(0,l \delta t^2 + q_{i-1}) \leq q_i \leq u \delta t^2 + q_{i-1}
+				\end{equation}
+				Note that since this truncates the derivative (rather than the predictor value) we do not run into the PoNR problems discussed earlier. 
+
+				It is therefore sufficient to write:
+				\begin{align}
+					B_{ij} & = \delta_{i,j-1}
+					\\
+					\psi_i(\vec{w}) & = \begin{cases}
+						\exp(w_i) & i = 0
+						\\ 
+						S(w_j,\ell^\prime,u^\prime) & \text{else}
+					\end{cases}
+					\\
+					S(w,l,u) & = l + \frac{u- l}{1 + \exp(-w)}
+					\\
+					\ell^\prime &= \text{max}(0,l \delta t^2 + \psi_{i-1})
+					\\
+					u^\prime & = l \delta t^2 + \psi_{i-1}
+				\end{align}
+
+				$B$ is an $N-1 \times N$ matrix.
+
+				The derivatives of this function are as follows:
+				\begin{align}
+					\div{c_i}{w_j} = \div{\psi_i}{w_j} & = \begin{cases} 0 & i < j
+						\\
+						\div{\psi_j}{w_j} \prod_{k = j+1}^i \pdiv{\psi_k}{\psi_{k-1}} & i\geq j
+					\end{cases}
+					\\
+					\div{\psi_j}{w_j} & = \begin{cases} \exp(w_j) & j = 0
+						\\
+						\frac{u - l}{(1 + \exp(-w_j))^2} \exp(-w_j) & \text{else}
+					\end{cases}
+					\\
+					\pdiv{\psi_k}{\psi_{k-1}} & = \begin{cases} 1 & \ell^\prime > 0
+						\\
+						\frac{1}{1 + \exp(-w_k)} & \ell^\prime = 0\end{cases}
+				\end{align}
+			\subsubsection{Positive, Monotonic \& Bounded Second Derivative}
+
+				As before, it is then trivial to extend this to the case where the function is positive - we simply need to constrain the first point to be positive, and then monotonicity takes care of the rest - and since we have one degree of freedom remaining, we can simply concatenate in a positivity constraint.
+
+				\begin{align}
+					B & = \mathds{1}_N
+					\\
+					\psi_i(\vec{w}) & = \begin{cases}
+						\exp(w_i) & i = 0,1
+						\\ 
+						S(w_j,\ell^\prime,u^\prime) & \text{else}
+					\end{cases}
+					\\
+					S(w,l,u) & = l + \frac{u- l}{1 + \exp(-w)}
+					\\
+					\ell^\prime &= \text{max}(0,l \delta t^2 + \psi_{i-1})
+					\\
+					u^\prime & = l \delta t^2 + \psi_{i-1}
+				\end{align}
+				(Note that though their forms are identical, $\psi_0 = \exp(w_0)$ and $\psi_1 = \exp(w_1)$ have different meanings - $z_0 = \psi_0$, whilst $z_1 = z_0 + \psi_1$.)
+
+				The derivatives of this function are similar to the above, with a slight modification:
+				\begin{align}
+					\div{c_i}{w_j} = \div{\psi_i}{w_j} & = \begin{cases} 
+						\div{\psi_j}{w_j} \prod_{k = j+1}^i \pdiv{\psi_k}{\psi_{k-1}} & i\geq j > 0
+						\\
+						\pdiv{\psi_j}{w_j} & i=j=0
+						\\
+						0 &\text{else}
+					\end{cases}
+					\\
+					\div{\psi_j}{w_j} & = \begin{cases} \exp(w_j) & j = 0,1
+						\\
+						\frac{u - l}{(1 + \exp(-w_j))^2} \exp(-w_j) & \text{else}
+					\end{cases}
+					\\
+					\pdiv{\psi_k}{\psi_{k-1}} & = \begin{cases} 1 & \ell^\prime > 0
+						\\
+						\frac{1}{1 + \exp(-w_k)} & \ell^\prime = 0\end{cases}
+				\end{align}
 \end{document}

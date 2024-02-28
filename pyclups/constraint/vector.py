@@ -44,6 +44,7 @@ class OptimiseVector(ConstraintVector):
 			if isinstance(offset,int) or isinstance(offset,float):
 				self.BaseValue = np.zeros((self.Dimension,1))+offset
 			else:
+				print(type(offset),offset)
 				self.BaseValue = np.reshape(offset,(dimension,1))
 		else:
 			self.BaseValue = np.zeros((self.Dimension,1))
