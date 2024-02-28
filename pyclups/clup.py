@@ -95,13 +95,12 @@ class Predictor:
 
 		#find a good initial position
 		self.Constraints.InitialPosition(self.p_blups)
-
 		#initialise optimiser parameters
 		ms = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
 		b2 = 0.95
-		steps = 300
+		steps = 500
 		alpha = 0.1
 
 		#values for keeping track of convergence
