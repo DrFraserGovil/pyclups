@@ -14,6 +14,8 @@ key = 0
 if len(sys.argv) > 1:
 	key = int(sys.argv[1])
 
+high = 50
+low = 30
 if key == 0:
 	pyclups.analysis.RunTest(
 		constraint=pyclups.constraint.Monotonic(),
@@ -23,7 +25,7 @@ if key == 0:
 		curve=sigmoid,
 		output ="monotonic",
 		description="Monotonic EIE",
-		sampling_rate=300
+		sampling_rate=low
 	)
 if key == 1:
 	constraint = pyclups.constraint.Monotonic()
@@ -36,7 +38,7 @@ if key == 1:
 		curve=sigmoid,
 		output ="mono_positive",
 		description="Monotonic \& Positive EIE",
-		sampling_rate=300
+		sampling_rate=low
 	)
 if key == 2:
 	pyclups.analysis.RunTest(
@@ -48,7 +50,7 @@ if key == 2:
 		output ="even",
 		description="Even EIE",
 		xnoise=0,
-		sampling_rate = 500
+		sampling_rate = high
 	)
 if key == 3:
 	constraint = pyclups.constraint.Even()
@@ -62,7 +64,7 @@ if key == 3:
 		output ="even_positive",
 		description="Even \& Positive EIE",
 		xnoise=0,
-		sampling_rate = 300
+		sampling_rate = low
 	)
 if key == 4:
 	pyclups.analysis.RunTest(
@@ -74,7 +76,7 @@ if key == 4:
 		curve=exper,
 		output ="integrable",
 		xnoise=0,
-		sampling_rate = 500
+		sampling_rate = high
 	)
 if key == 5:
 	constraint = pyclups.constraint.Integrable(1.0)
@@ -88,7 +90,7 @@ if key == 5:
 		output ="even_integrable",
 		description="Even \& Integrable EIE",
 		xnoise=0,
-		sampling_rate = 300
+		sampling_rate = low
 	)
 if key == 6:
 	constraint = pyclups.constraint.PositiveIntegrable(1.0)
@@ -101,5 +103,5 @@ if key == 6:
 		output ="positive_integrable",
 		description="Positive \& Integrable EIE",
 		xnoise=0,
-		sampling_rate = 300
+		sampling_rate = low
 	)

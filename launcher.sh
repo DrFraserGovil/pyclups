@@ -3,5 +3,5 @@
 
 for i in {0..6}
 do
-	python analysisTest.py $i &
+	python3 analysisTest.py $i &
 done

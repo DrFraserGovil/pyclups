@@ -26,10 +26,10 @@ def RunTest(**kwargs):
 	xnoiseFrac= 0
 	ellMin = 0.01
 	ellMax = 2
-	ellRes = 50
+	ellRes = 5
 	noiseMin = 0.01
 	noiseMax = 0.5
-	noiseRes = 50
+	noiseRes = 5
 	sampling = 50
 	for key,value in kwargs.items():
 		if key=="data_count":
