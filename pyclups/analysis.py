@@ -16,14 +16,21 @@ def RunTest(**kwargs):
 	pt.rcParams['text.usetex'] = True
 	nData = lambda : np.random.randint(7,20)
 	curveGenerator = lambda x,params: curvy(x,params)  #monotonic function
-	noise = 0.3
 	basis = pyclups.basis.Hermite(5)
 	constraint = pyclups.constraint.Monotonic()
-	# constraint.Add(pyclups.constraint.Positive(lambda t: np.abs(t +10) < 1e-3))
-	outRes = 25
-	K_generator = lambda ell: pyclups.kernel.SquaredExponential(kernel_variance=0.5,kernel_scale=ell)
+	outRes = 75
+	bounds = [-10,10]
+	K_generator = lambda ell: pyclups.kernel.SquaredExponential(kernel_variance=0.5 ,kernel_scale=ell)
 	saveName = "output"
 	description = "Monotonic EIE"
+	xnoiseFrac= 0
+	ellMin = 0.01
+	ellMax = 2
+	ellRes = 50
+	noiseMin = 0.01
+	noiseMax = 0.5
+	noiseRes = 50
+	sampling = 50
 	for key,value in kwargs.items():
 		if key=="data_count":
 			nData = value
@@ -37,20 +44,36 @@ def RunTest(**kwargs):
 			constraint = value
 		elif key == "resolution":
 			outRes = value
-		elif basis=="resolution":
+		elif key =="kernel":
 			K_generator = value
+		elif key == "bounds":
+			bounds = value
+		elif key=="output":
+			saveName = value
+		elif key=="description":
+			description = value
+		elif key == "xnoise":
+			xnoiseFrac = value
+		elif key == "ell_min":
+			ellMin = value
+		elif key == "ell_max":
+			ellMax = value
+		elif key == "noise_min":
+			noiseMin = value
+		elif key == "noise_max":
+			noiseMax = value
+		elif key == "ell_resolution":
+			ellRes = value
+		elif key == "noise_resolution":
+			noiseRes = value
+		elif key == "sampling_rate":
+			sampling = value
 		else:
 			raise KeyError("Unknown key (" + str(key) + ") passed to Analysis Interface")
 		
-	ellMin = 0.01
-	ellMax = 2
-	ellRes = 25
-	noiseMin = 0.01
-	noiseMax = 0.5
-	noiseRes = 25
+	
 	fails = 0
 	success = 0
-	sampling = 25
 
 	ells = np.linspace(ellMin,ellMax,ellRes)
 	noises=np.linspace(noiseMin,noiseMax,noiseRes)
@@ -74,7 +97,7 @@ def RunTest(**kwargs):
 		else:
 			N = nData
 		params = 3 *np.random.random((2,))
-		x = np.linspace(-10,10,N)
+		x = np.linspace(bounds[0],bounds[1],N)
 		ttOrig = np.linspace(x[0],x[-1],outRes)
 		
 		
@@ -87,7 +110,8 @@ def RunTest(**kwargs):
 			for i in tqdm(range(0,noiseRes),leave=False,disable=quiet):
 				noise = noises[i]
 				xnoise = np.random.normal(0,noise,(outRes,))
-				tt = np.sort(ttOrig+xnoise)
+				tt = ttOrig + xnoise*xnoiseFrac
+
 				true = curveGenerator(tt,params)
 				yTrue = curveGenerator(x,params)
 
@@ -123,7 +147,7 @@ def RunTest(**kwargs):
 	axs[1].cla()
 	axs[2].cla()
 	r =  f"({100*(allCount - coincidentCount)/allCount:.0f}\% non-coincident CLUPS)"
-	tit = description + " " + r
+	tit = description + "\n" + r
 	figs.suptitle(tit,fontsize=15)
 	im=axs[0].imshow(successGrid/counts,extent = [ells[0],ells[-1],noises[0],noises[-1]], aspect='auto')
 	cb1 = pt.colorbar(im,ax=axs[0])
