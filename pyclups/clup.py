@@ -6,10 +6,11 @@ from matplotlib import pyplot as pt
 class Predictor:
 	trueFunc = None
 	
-	def __init__(self,kernel,constraint,basis):
+	def __init__(self,kernel,constraint,basis,verbose=False):
 		self.Kernel = kernel
 		self.Constraints = constraint
 		self.Basis = basis
+		self.Verbose = verbose
 
 	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
 		self.Constraints.Validate(predictPoints)
@@ -100,8 +101,8 @@ class Predictor:
 		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
 		b2 = 0.95
-		steps = 500
-		alpha = 0.1
+		steps = 300
+		alpha = 0.2
 
 		#values for keeping track of convergence
 		oldScore = 0
@@ -144,11 +145,13 @@ class Predictor:
 			#exit if gradient is very flat
 			if gNorm < 1e-7:
 				mse = self._ComputeScore(predictPoints)
-				print(f"Convergence Criteria met: Gradient flat ({gNorm})")
+				if self.Verbose:
+					print(f"Convergence Criteria met: Gradient flat ({gNorm})")
 				break
 						
 			if (delta < 1e-10 and l > 120):
-				print(f"Convergence Criteria met: Function value stable at, {mse} with mean change {delta}")
+				if self.Verbose:
+					print(f"Convergence Criteria met: Function value stable at, {mse} with mean change {delta}")
 				break
 
 			## some extensions to the ADAM optimiser to make it take smaller steps when large oscillations

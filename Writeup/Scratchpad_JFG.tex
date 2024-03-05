@@ -505,7 +505,7 @@
 						\\
 						\frac{1}{1 + \exp(-w_k)} & \ell^\prime = 0\end{cases}
 				\end{align}
-			\subsubsection{Positive, Monotonic \& Bounded Second Derivative}
+			\subsection{Positive, Monotonic \& Bounded Second Derivative}
 
 				As before, it is then trivial to extend this to the case where the function is positive - we simply need to constrain the first point to be positive, and then monotonicity takes care of the rest - and since we have one degree of freedom remaining, we can simply concatenate in a positivity constraint.
 
@@ -545,4 +545,187 @@
 						\\
 						\frac{1}{1 + \exp(-w_k)} & \ell^\prime = 0\end{cases}
 				\end{align}
+
+			\subsection{Positive, Monotonic \& Bounded Second Derivative}
+
+				This is, once again, gross - and once again $\ell < 0 < u$
+
+				We once again use an iterative method, using $w_{j < i}$ to determine $z_i$. At each point, there are a number of considerations:
+				\begin{itemize}
+					\item At no point must $z_i$ be negative
+					\item At no point must $z_i$ generate a gradient negative enough that $z_{j > i}$ will be forced to be negative
+					\item At no point must $z_i$ be so large that the integral is forced to be greater than $\mathcal{I}$.
+					\item At no point must $z_i$ be so small that the integral is forced to be less than $\mathcal{I}$.
+				\end{itemize}
+				These first two points we can already constrain, using the PoNR function. The second two constraints arise from the fact that we know what the sum of points must be equal to -- but since the movement of points is constrained by the curvature, it would be possible to make it impossible to reach the values required for the integral. 
+
+				We define the running integral $R_i = \frac{1}{2} z_0 + \sum_{j = 1}^{i-1} z_i$, with the target value of $R_{N-1}$ being $\frac{\mathcal{I}}{\delta t}$
+
+				\subsubsection{Undershooting}
+
+
+					An undershoot occurs when a $z_i$ is chosen such that, even if the curve subsequently has constant curvature $u$, the integral is $I^\prime < \mathcal{I}$.	
+
+					The integral can be approximated then as:
+					\begin{align}
+						I^\prime &  = R_i + \int_{t_i}^{t_{N-1}} \frac{u}{2} (t - d_i)^2 + c_i \mathrm d t
+					\end{align}
+					The values of $d_i$ and $c_i$ can be computed by equating the functional and derivative values:
+					\begin{align}
+						d_i & = t_i - \frac{z_i - z_{i-1}}{ u \delta t}
+						\\
+						c_i & = z_i  - \frac{(z_i - z_{i-1})^2}{2 u \delta t^2}
+					\end{align}
+					The integral is then given by $(\Delta t_i = t_{n-1} - t_i)$:
+					\begin{equation}
+						I^\prime = \delta t R_i + \Delta t_i z_i \left( 1 + \frac{\Delta t_i}{2 \delta t} \right) - \frac{\Delta t_i^2 z_{i-1}}{2 \delta t} + \frac{u \Delta t_i^3}{6}
+					\end{equation}
+					Undershooting occurs when $I^\prime < \mathcal{I}$, so we require:
+					\begin{equation}
+						z_i \geq z_\text{under} = \left(1 + \frac{\Delta t_i}{2\delta t}\right)^{-1} \left(\mathcal{I} - \delta t R_i + \frac{\Delta t_i^2 z_{i-1}}{2 \delta t} - \frac{u \Delta t_i^3}{6}\right)
+					\end{equation}
+					Since $z_{i-1}$ was also chosen subject to these conditions, it follows that $z_i^\text{undershoot} < z^\text{max}$ - i.e. so long as the first two points of the sequence are suitably chosen, all subsequent points will have a finite $z_\text{undershoot} \leq z \leq z_\text{max}$.
+
+
+				\subsubsection{Overshooting}
+
+					An overshoot occurs when a $z_i$ is chosen such that, even if the curve subsequently has curvature $\ell$ the integral is $I^\prime > \mathcal{I}$, OR, if the curve which would be required would cause the curve to go negative before $t_{N-1}$.
+
+					Following the same logic as before, we find:
+					\begin{equation}
+						z_i \leq z_\text{over} = \left(1 + \frac{\Delta t_i}{2\delta t}\right)^{-1} \left(\mathcal{I} - \delta t R_i + \frac{\Delta t_i^2 z_{i-1}}{2 \delta t} - \frac{\ell \Delta t_i^3}{6}\right)
+					\end{equation}
+
+					However, there is another condition -- namely that the overshooting curve is not bounded by zero -- this forward projection might lead to us overshooting since negativity is impossible. We must therefore also ensure that $z_i \leq z_\text{zero}$. $z_\text{0}$ can be found by projecting \textit{backwards} a line with constant curvature $\ell$ which intersects $z = 0$ at $t = t_{N-1}$, but which has area $I- \delta t R_i$. If $z_i$ is ever above this line, then the overshooting curve will force $z_i < 0$. 
+
+					The parameters of the back-projected line are $\frac{\ell}{2}\left[(t - q_i)^2 - (t_f - q_i)^2 \right]$ - this ensures the correct curvature and intersection. All that remains is to constrain $q_i$ by requiring the integral:
+					\begin{align}
+						I - \delta t R_i & = \int_{t_i}^{t_{N-1}} \frac{\ell}{2}\left[(t - q_i)^2 - (t_f - q_i)^2 \right]
+						\\
+						\frac{2(I - \delta t R_i)}{\ell} & = \frac{\Delta^3 t_i}{3} + 2 q_i( t_{N-1} \Delta t_i - \frac{\Delta^2 t_i}{2}) - t_{N-1}^2 \Delta t_i
+					\end{align}
+					Where $\Delta^n t_i = t_i^n - t_{N-1}^n$. This gives:
+					\begin{align}
+						q_i = \frac{1}{\Delta t_i^2} \left( \frac{2(I - \delta t R_i)}{\ell} - \frac{\Delta^3 t_i}{3} - t_N^2 \Delta t_i\right)
+					\end{align}
+					The maximum permitted value of $z$ is therefore found from:
+					\begin{equation}
+						z_\text{zero} = \frac{\ell}{2} \left( (t_i - q_i)^2 - (t_{N-1} - q_i)^2\right)
+					\end{equation}
+					We note that this somewhat violates the previous assumption about the PoNR which explicitly prohoibited the 'collision course' implied by $z_\text{zero}$. If we ever find a case where $z_\text{zero} < z_\text{PoNR}$, then we must take $z = z_\text{zero}$ - since this implies that the \textit{only} possible path forward is the direct collision course. 
+
+					To summarise:
+
+					At each point $i$, $z_i$ is bounded by:
+					\begin{equation}
+						\text{max}(0,z_\text{under},\text{min}(z_\text{zero},z_\text{PoNR}),\ell \delta t^2 + 2 z_{i-1} - z_{i-2}) \leq z_i \leq \text{min}(z_\text{over},z_\text{zero},u \delta t^2 + 2 z_{i-1} - z_{i-2})
+					\end{equation}
+	\newpage
+	\section{Comments: Distribution Version}
+
+		I think the paper is really coming together! I have gone over this with a fine-toothed comb so this is me being picky in lots of places.
+
+		\begin{enumerate}
+			\item c.f. my previous comment about the first paragraph -- how about augmenting it with something like:
+			
+			{\it ...and in particular for fitting curves to samples of computationally expensive black-box functions (Rasmussen and Williams 2006). {\color{red} Both the BLP and the BLUP are solutions to the following problem: g}iven a potentially noisy sample of a curve we wish to infer the value of that curve at an arbitrary point.... }
+
+			Makes it obvious that you're still talking about the properties of the BLUP rather than moving onto something that \textit{we} are doing.
+
+			\item Still in first para, you double-use `element' to refer to different things (elements in predictor space vs element of X) in a potentially ambiguous way. Maybe:
+			
+			{\it The set of predictors for every {\color{red} point in the predictor-space} then serves as the fitted curve. The BLP and BLUP for each {\color{red} prediction} are both weighted sums of the elements of the sample. In the case of the BLP the weights are chosen so as to minimize the mean-square error of prediction.}
+
+			\item In second para, your list of constraints is maybe a little prescient, Muad'dib! Rather than just list off "here's what we're doing later", replace them with motiviations that lead to the constraints?
+			
+			{\it For example we may know that the function is a probability distribution function, in which case it must be positive and have a bounded integral. Known symmetries might require the function to be even, or strong priors on the underlying mechanics may lead us to requure a monotonic predictor, or one bounded by known curves.}
+
+			\item Immediately after this, I would then add {\it {\color{red}In the normal BL(U)P, t}his knowledge goes unused....}
+			\item You mention pairwise constraints from monotonicity -- also throw in a reference to, i.e. integrability which constrains the entire set of predictors simultaneously?
+			\item You italicise 'subject to the constraint' wrt the BLUP in the first para, so I would do the same with the CLUPS: We minimize the \textit{total mean-square error} of the sequence of predictors \textit{\color{red}subject to these constraints}. 
+			\item Eq. 15 is horrible to parse -- I would maybe fudge some of the bracket sizing/replace parans with square brackets to make the groupings easier to see!
+			\item After the comment {\it``The BLUP for Zt exists if and only if m is contained by the span of the basis functions''} is it worth writing here (or anywhere) that this means that whenever we use a finite basis set we're making an approximation, but that this is generally OK? Otherwise we've written ourselves into a corner that we need to use as high dimensional bases as possible which does not end well!
+			\item define GLS before you use it -- {\it the generalized least-squares (GLS) estimator for the mean.} I know it's obvious from context, but it's good practice.
+			\item In section 2, make explicit the difference between $R$ and $K$. 
+			\item In Eq. 23 there is a typo -- repeats $E(Z_t^2)$ twice - one should be $E(Z_t)^2$, right?
+			\item I originally had a comment here about that after 37, needed to write $b^{\prime \prime}$ is concatenation of $[b,b^\prime]$ with dimensions $q = u + v$ and so on, but then found it on the next page, so that's great! I might move that section (starting from 42) up (to immediately after 37) -- just so all of the 'constraint stuff' is in one place, but I think that's a minor quibble.
+			\item The comment about bounded $\vec{w}$ in the gradient discussion is almost there (but not quite -- it says $w$ is bounded which is the opposite!) -- I might tweak it to the following:
+			
+			{\it To interpret the remaining three cases we should note that our constraints restrict the
+			parameter {\color{red} $\vec{c}$ to taking values within some subset of $V \in \mathbb{R}^q$, and our definition of $\psi$ required that this region be connected, and $\psi$ be within this region and differentiable for all $\vec{w}$ - as a result, $\pdiv{\psi}{w}$ must vanish as it approaches the boundary of $V$.  Therefore, the} second case holds when a constraint is satisfied...}
+
+			\item Your wording that the {\it CLUPS differs from the set of BLUPs by the shortest random vector consistent with the constraints.} I think is a bit dodgy, since it implies that $ B \Delta = \vec{c}$, which isn't the case. I think what you mean is {\it The CLUPS is the set of vectors closest to the BLUPS which obeys the constraints}?
+			\item Remark 6 could do with an addition (and constrained-BLUP $\to$ CLUPS for consistency):
+			
+			{\it The MSE of the constrained CLUPS is in general larger than that of the BLUP since the constraints prohibit the MSE from taking the smallest possible value. {\color{red}This is also true of the BLUP, for which the unbiasedness condition makes it `worse' than the BLP - the predictor which is defined as having the globally-minimal MSE}. This reflects the fact that we accept the constraints {\color{red} (and unbiasedness)} to be a better source of knowledge than the MSE.}
+			
+			\item Small addition to excess conditions:
+			
+			{\it Although it is obvious when expressed in our language that the concatenation of such constraints will fail \textcolor{red}{due to the matrix rank}....}
+
+			\item Back to the cummax thing, I might just rearrange some things around:
+			
+			{\it {\color{red}This projection does not always lead to functions close to the optimum - in the case of a monotonically-constrained CLUPS, the initialisation projection is the cumulative maximum of the sequence of BLUPS - a non-optimum solution. In the pathological case of such a monotonically-increasing CLUPS where the BLUP is monotonically \textit{decreasing}, the CLUPS would predict $Z_{t_0}^\text{BLUP}$ for every value -- clearly extremely far from the optimum.}
+			
+			Nevertheless, we find experimentally that this initialization serves as a good ansatz for the optimum point in many real-world applications.}
+			
+			\item I hate 'much used' with a fiery passion that could consume a trillion suns.	
+			
+			\item In the resolution dependence section, I would add 'may': 
+			
+			{\it But in general a CLUPS of finite length, $\vec{Z}^{CLUPS}$, is not a sample of the random process ${Z}^{CLUPS}$ since the elements of $\vec{Z}^{CLUPS}$ \textcolor{red}{may} differ according to its length.}
+
+			\item It might be worth simply stating that this occurs when your constraints are non-separable? I.e. Predictor-Sets are not resolution dependent, but Predictor-Sequences are. 
+			
+			\item When defining $\epsilon$, worth mentioning that this is only possible since we know a `ground truth'?
+			\item In the Nonnegative constraint you use the diagonality argument for separability. We know this isn't true! (Let $\vec{c}(w) = (e^{w},e^{w}, e^w...)$ and $B = I$ you have a diagonal matrix but very strongly (i.e. rigidly) coupled predictors!),
+			\item In Eq88, second Z should be $Z_{-t_j}$ -- you've assumed ordering again, I think?
+			\item I think maybe refining 'the constraint matrix not to be defined' -- that wording sounds \textit{bad}, when what it actually means is that the points are unconstrained. Something being 'not defined' has worse connotations than 'unneeded', right?
+			\item Did you want to chuck in a line about how both the BLUP and the CLUPS are improved by making the basis set use only even elements?
+			\item In monotonic section you flip between using logistic and sigmoid. Choose one, stick to it.
+		
+		\end{enumerate}
+					
+		\subsection{Triviliaty in Constraints}
+
+			Throughout the case studies, we make it fairly obvious that a number of the CLUPS predictors are \textit{trivial}, in the sense that they are elementary manipulations of the BLUP.
+
+			Should we discuss what this means -- does this reduce the CLUPS' useability? Should we maybe split them up into a 'trivial' section (even, integrable, positive) and a non-trivial section (monotonic).
+
+			Should we emphasise that evenness on its own being trivial doesn't necessarily matter, for example, because evenness + x might be non-trivial, so we're just providing basic building blocks?
+
+		\subsection{Initialisation}
+			I have come to realise that my initialisation stuff is not quite as general as I might like it to be -- it works for one-sided bounds, but doesn't for two sided stuff. When I've been coding it up, I have cheated a little bit - I will now attempt to formalise that cheating!
+
+			{\it In the case where $\vec{w}$ must be optimised, we must first choose an initial starting point, $\vec{w}_0$, for the starting optimisation. The closer this is to the optimal point, the quicker the optimiser will converge.
+
+			In order to make this efficient, we rewrite the constraint vector $\vec{c}$ in the following fashion:
+			\begin{equation}
+				\vec{c}(\vec{w}) = \vec{\xi} + \psi(\vec{w})
+			\end{equation}
+			Here $\vec{\xi}$ contains the equality constraints and $\vec{\psi}$ the inequality constraints, such that $\xi_i = 0$ if $i$ is an inequality, and $\psi_j = 0$ if $j$ is an equality\footnote{Without loss of generality, $\xi$ may also contain constant-offsets from the inequality constraints - i.e. the constraint that $Z_i > a_i$ could set $\xi_i = a_i$ and $\psi_i = \exp(w_i)$ instead of $\psi_i = a_i + \exp(w_i)$.}. By definition, $\psi(\vec{w})$ is a function $\mathbb{R}^d \to V \subset \mathbb{R}^q$, and is differentiable for all $\vec{w} \in \mathbb{R}^d$. We also limit ourselves to the case where $\psi^{-1}(\vec{v})$ exists for all $\vec{v} \in V$. We then define the \textit{buffered inverse} $\psi^{-1}_b(\vec{x})$ such that:
+			\begin{equation}
+				\psi^{-1}_b(\vec{x}) = \begin{cases} 
+					\psi^{-1}(\vec{x}) & \vec{x} \in V
+					\\
+					\psi^{-1}(\vec{y}) ~~ \vec{y} \in \partial V, \text{min}(|\vec{x} - \vec{y}|) & \text{else}
+				\end{cases}
+			\end{equation}
+			In short, the buffered inverse is equal to the inverse within $V$, and projects the vector back onto the boundary of the region when it is outside $V$. For example, the buffered inverse of the exponential function (on the Reals) would be:
+			\begin{equation}
+				\ln^{-1}_b(x) = \begin{cases}
+					\ln(x) & x > \epsilon
+					\\
+					\ln(\epsilon) & \text{else{}}
+				\end{cases}
+			\end{equation}
+			For some $0 < \epsilon \ll 1$ - chosen for numerical stability. In some parameterizations, $\psi^{-1}(\vec{x})$ is not unique (for example, $\psi_j = (\sum_i w_i)^{-1} c_j$) in such a case we simply define the buffered inverse as one such solution (the solution where $c_0 = 1$, for example).
+
+			The algorithm for determining the initialisation point is then:
+			\begin{enumerate}
+				\item Compute $\{ \vec{a}^\text{BLUP} \}$ and hence $\hat{\vec{Z}}^\text{blup}$: the predictors using the normal BLUP algorithm
+				\item Let $\tilde{\vec{c}} = B \vec{Z}_t = \vec{\xi} + \tilde{\vec{\varphi}}$
+				\item Set $\vec{w}_0 = \psi^{-1}\left(\varphi_j\right)$
+			\end{enumerate}
+			}
 \end{document}

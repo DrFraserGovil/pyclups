@@ -32,7 +32,7 @@ def GenerateData(**kwargs):
 	elif mode =="random":
 		t = np.random.uniform(xmin,xmax,(N,))
 	elif mode == "semi":
-		t = np.linspace(xmin,xmax,N) + (xmin-xmax)/(1.3*N)*np.random.normal(0,1,N,)
+		t = np.linspace(xmin,xmax,N) + (xmin-xmax)/(1.5*N)*np.random.normal(0,1,N,)
 	else:
 		raise KeyError("Unknown mode (" + mode +") passed to data generator")
 	t = np.sort(t)

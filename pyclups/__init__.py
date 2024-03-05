@@ -6,3 +6,4 @@ import pyclups.constraint
 import pyclups.basis
 from pyclups.generator import *
 from pyclups.prediction import *
+import pyclups.analysis
