@@ -14,8 +14,8 @@ key = 0
 if len(sys.argv) > 1:
 	key = int(sys.argv[1])
 
-high = 50
-low = 30
+high = 500
+low = 300
 if key == 0:
 	pyclups.analysis.RunTest(
 		constraint=pyclups.constraint.Monotonic(),
