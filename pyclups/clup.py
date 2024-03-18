@@ -101,8 +101,8 @@ class Predictor:
 		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 		b1 = 0.7
 		b2 = 0.95
-		steps = 300
-		alpha = 0.2
+		steps = 500
+		alpha = 0.1
 
 		#values for keeping track of convergence
 		oldScore = 0
