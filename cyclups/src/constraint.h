@@ -62,8 +62,10 @@ namespace cyclups::constraint
 				double start = 0;
 				for (int i = 0; i < Constraints.size(); ++i)
 				{
-					Vector subc = c.segment(start,Constraints[i]->Dimension);
+					int dim = Constraints[i]->Dimension;
+					Vector subc = c.segment(start,dim);
 					Constraints[i]->vector.Initialise(subc);
+					start += dim;
 				}
 			}
 

@@ -92,6 +92,7 @@ namespace cyclups::constraint
 				transformOperator inv = [](Vector & output, const Vector & input,std::vector<double> & params){for (int i =0; i < output.size(); ++i){
 					double buffered = std::max(input[i] - params[i],1e-8);
 					output[i] = log(buffered);
+					std::cout << "GT  " << input[i] << "  " << params[i] + buffered << std::endl;
 				}};
 				ConstraintVector c = ConstraintVector::Optimise(n,n,f,grad,inv);
 				if (usingConst)
@@ -190,6 +191,7 @@ namespace cyclups::constraint
 				transformOperator inv = [](Vector & output, const Vector & input,std::vector<double> & params){for (int i =0; i < output.size(); ++i){
 					double buffered = std::max(-input[i] + params[i],1e-8);
 					output[i] = log(buffered);
+						std::cout << "LT " << input[i] << "  " << params[i] + buffered << std::endl;
 				}};
 				ConstraintVector c = ConstraintVector::Optimise(n,n,f,grad,inv);
 				// c.SetBounds(-3,10);

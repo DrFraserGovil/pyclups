@@ -124,7 +124,7 @@ namespace cyclups
 		// for (int i = 0; i < Constraint.)
 		Constraint.SetPosition(Store.Bp_blups);
 
-		int maxLoops = 1000;
+		int maxLoops = 0;
 		double alpha = 0.01;
 		double b1 = 0.7;
 		double b2 = 0.9;

@@ -61,9 +61,9 @@ int main(int argc, char**argv)
 
 
 	// auto r = cyclups::constraint::Integrable(2);
-	auto c1 = cyclups::constraint::LessThan([](double t){return 0.025*t+0.1;});
+	auto c1 = cyclups::constraint::LessThan([](double t){return 0.2;},[](double t){return t > 0;});
 	auto c2 = cyclups::constraint::GreaterThan([](double t){return -0.025*t;},[](double t){return t < 0;});
-	auto combined = c1;
+	auto combined = c2 + c1;
 	double xmin = -3;
 	double xmax = 3;
 	int res = 21;
