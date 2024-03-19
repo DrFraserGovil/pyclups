@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "subconstraint.h"
+#include "OptimiserProperties.h"
 #include <stdexcept>
 namespace cyclups::constraint
 {
@@ -150,15 +151,32 @@ namespace cyclups::constraint
 				}
 				return Grad;
 			}
-			void Step(Vector & grad,int l, double alpha,double b1, double b2)
+			double Step(Vector & grad,int l,const OptimiserProperties & op)
 			{
 				int start = 0;
+				double runSum = 0;
 				for (int i = 0; i < Constraints.size(); ++i)
 				{
 					int dim = Constraints[i]->TransformDimension;
 					auto v = VectorSlice(grad,start,dim);
-					Constraints[i]->vector.Step(v,l,alpha,b1,b2);
+					runSum += Constraints[i]->vector.Step(v,l,op);
 					start += dim;
+				}
+				return sqrt(runSum);
+			}
+
+			void SavePosition()
+			{
+				for (int i = 0; i < Constraints.size(); ++i)
+				{
+					Constraints[i]->vector.SavePosition();
+				}
+			}
+			void RecoverPosition()
+			{
+				for (int i = 0; i < Constraints.size(); ++i)
+				{
+					Constraints[i]->vector.RecoverPosition();
 				}
 			}
 			std::vector<std::unique_ptr<Constraint>> Constraints;

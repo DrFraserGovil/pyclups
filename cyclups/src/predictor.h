@@ -4,6 +4,7 @@
 #include "prediction.h"
 #include "Eigen"
 #include "constraint.h"
+#include "OptimiserProperties.h"
 namespace cyclups
 {
 	typedef const std::vector<double> &  cvec;
@@ -23,10 +24,12 @@ namespace cyclups
 		Matrix K;
 	};
 
+	
+
 	class Predictor
 	{
 		public:
-			
+			OptimiserProperties Optimiser;
 			template<class T>
 			Predictor(kernel::Kernel k, basis::Basis b, T &constraint) : Kernel(k), Basis(b), Constraint(constraint){
 			};

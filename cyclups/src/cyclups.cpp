@@ -10,8 +10,8 @@
 #include "my_constraints.h"
 double testFunc(double x)
 {
-	// return 1.0/(1 + exp(-x));
-	return 1.0/sqrt(2*M_PI) * exp( - x*x/2)-0.1;
+	return 1.0/(1 + exp(-x));
+	// return 1.0/sqrt(2*M_PI) * exp( - x*x/2)-0.1;
 }
 
 void Curve(JSL::gnuplot & gp, cyclups::PairedData curve, std::string name)
@@ -61,11 +61,11 @@ int main(int argc, char**argv)
 
 
 	// auto r = cyclups::constraint::Integrable(2);
-	auto c1 = cyclups::constraint::LessThan([](double t){return 0.2;},[](double t){return t > 0;});
-	auto c2 = cyclups::constraint::GreaterThan([](double t){return -0.025*t;},[](double t){return t < 0;});
-	auto combined = c2 + c1;
-	double xmin = -3;
-	double xmax = 3;
+	// auto c1 = cyclups::constraint::LessThan([](double t){return 0.2;},[](double t){return t > 0;});
+	auto c2 = cyclups::constraint::BoundedBetween(0.2,0.8);
+	auto combined = c2;
+	double xmin = -10;
+	double xmax = 10;
 	int res = 21;
 	auto D = cyclups::generator::NoisyXSample(res,testFunc,xmin,xmax,0.05);
 	// for (int i = 0; i < 2; ++i)

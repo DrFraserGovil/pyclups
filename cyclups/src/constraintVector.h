@@ -1,5 +1,6 @@
 #pragma once
 #include "dataArrays.h"
+#include "OptimiserProperties.h"
 namespace cyclups::constraint
 {
 
@@ -85,22 +86,25 @@ namespace cyclups::constraint
 				Inverse(W,c,TransformParams);
 			}
 
-			void Step(VectorSlice v, int l, double alpha,double b1, double b2)
+			double Step(VectorSlice v, int l, const OptimiserProperties & op)
 			{
-				double c1 = 1.0/(1 - pow(b1,l+1));
-				double c2 = 1.0/(1.0 - pow(b2,l+1));
+				double c1 = 1.0/(1 - pow(op.b1,l+1));
+				double c2 = 1.0/(1.0 - pow(op.b2,l+1));
+				double runSum = 0;
 				for (int i = 0; i < TransformDimension; ++i)
 				{
+					double prev = W[i];
 					double q = v[i];
-					Optim_M[i] = b1 * Optim_M[i] + (1.0 - b1) * q;
-					Optim_V[i] = b2 * Optim_V[i] + (1.0 - b2) * q*q;
-					double denom = sqrt(Optim_V[i] * c2 + 1e-16);
-					W[i] -= alpha * c1 * Optim_M[i] /denom;
+					Optim_M[i] = op.b1 * Optim_M[i] + (1.0 - op.b1) * q;
+					Optim_V[i] = op.b2 * Optim_V[i] + (1.0 - op.b2) * q*q;
+					double denom = sqrt(Optim_V[i] + 1e-10);
+					W[i] -= op.alpha * Optim_M[i] /denom;
 
 					if (bounder)
 					{
 						W[i] = std::min(maxWVal,std::max(W[i],minWVal));
 					}
+					runSum += pow(W[i] - prev,2);
 				}
 			}
 
@@ -113,6 +117,14 @@ namespace cyclups::constraint
 				bounder = true;
 				minWVal = min;
 				maxWVal = max;
+			}
+			void SavePosition()
+			{
+				BestW = W;
+			}
+			void RecoverPosition()
+			{
+				W = BestW;
 			}
 		private:
 			Vector value;
@@ -172,6 +184,7 @@ namespace cyclups::constraint
 			Matrix gradient;
 			Vector spoofgradient;
 			Vector W;
+			Vector BestW;
 			Vector Optim_M;
 			Vector Optim_V;
 	};

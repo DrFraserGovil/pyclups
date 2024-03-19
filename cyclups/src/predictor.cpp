@@ -63,10 +63,8 @@ namespace cyclups
 		Matrix DeltaMatrix = Matrix::Identity(nData,nData) - corr.transpose(); 
 
 		Vector Dx = DeltaMatrix *x;
-		// std::cout << K.rows() << "x" << K.cols() << "  " << Dx.size() << std::endl; 
 		Store.Delta = K_decomp.solve(Dx);
 		Store.Beta = x.dot(Store.Delta);
-		// std::cout << "solved" << std::endl;
 	}
 	Prediction Predictor::Predict(cvec predictX,const PairedData & data, double dataErrors)
 	{
@@ -104,7 +102,6 @@ namespace cyclups
 
 	double Predictor::ComputeScore(cvec predictX)
 	{
-		// std::cout << "comp" << std::endl;
 		Vector BzminusC = Store.Bp_blups - Constraint.VectorValue();
 		Vector corrector  = Constraint.B.transpose() * Store.BBt.solve(BzminusC);
 
@@ -112,7 +109,6 @@ namespace cyclups
 		double score = 0;
 		for (int i =0; i < predictX.size(); ++i)
 		{
-			// std::cout << i << "  " << corrector[i] << Store.Beta << "  " << Store.Delta << std::endl; 
 			auto ai = Store.a_blups[i] + corrector[i]/Store.Beta * Store.Delta;
 			score += Kernel(predictX[i],predictX[i]) +  ai.dot(Store.K * ai) - 2 * Store.ks[i].dot(ai);
 		}
@@ -121,24 +117,41 @@ namespace cyclups
 
 	void Predictor::Optimise(cvec predictX, const PairedData & data, cvec dataErrors)
 	{
-		// for (int i = 0; i < Constraint.)
 		Constraint.SetPosition(Store.Bp_blups);
+		Optimiser.Clear();
 
-		int maxLoops = 0;
-		double alpha = 0.01;
-		double b1 = 0.7;
-		double b2 = 0.9;
-		for (int l = 0; l < maxLoops; ++l)
+		double bestScore = ComputeScore(predictX);
+		Constraint.SavePosition();
+
+		int l = 0;
+		while (!Optimiser.Converged)
 		{
 			Vector dLdc = Store.BBt.solve(Constraint.VectorValue() - Store.Bp_blups);
 			Matrix dcdw = Constraint.Gradient();
 			Vector dLdw = dcdw * dLdc;
 
-			auto c = Constraint.VectorValue();
-			Constraint.Step(dLdw,l,alpha,b1,b2);
-			alpha *=0.99;
-			std::cout << l << "   " << ComputeScore(predictX) << std::endl;
+			Constraint.Step(dLdw,l,Optimiser);
+
+			if (l % 5 == 0)
+			{
+				double mse = ComputeScore(predictX);
+				if (mse < bestScore)
+				{
+					bestScore = mse;
+					Constraint.SavePosition();
+				}
+				Optimiser.CheckConvergence(l,dLdw.norm(),mse);
+			}
+			else
+			{
+				Optimiser.CheckConvergence(l,dLdw.norm());
+			}
+			
+
+			++l;
 		};
+		Constraint.RecoverPosition();
+		Optimiser.PrintReason();
 	}
 
 	void Predictor::Retire()
