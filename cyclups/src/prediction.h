@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "dataArrays.h"
+#include "customTypes.h"
 namespace cyclups
 {
 	class Prediction

@@ -1,5 +1,5 @@
 #pragma once
-#include "dataArrays.h"
+#include "customTypes.h"
 #include "OptimiserProperties.h"
 namespace cyclups::constraint
 {

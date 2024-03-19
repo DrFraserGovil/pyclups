@@ -1,6 +1,5 @@
 #pragma once
-#include "dataArrays.h"
-#include "Eigen"
+#include "customTypes.h"
 namespace cyclups::kernel
 {
 	typedef double(* kernelFunctionPointer)(double,double, std::vector<double>);

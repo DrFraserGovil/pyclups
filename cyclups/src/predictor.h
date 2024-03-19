@@ -3,7 +3,7 @@
 #include "kernel.h"
 #include "prediction.h"
 #include "Eigen"
-#include "constraint.h"
+#include "ConstraintSet.h"
 #include "OptimiserProperties.h"
 namespace cyclups
 {

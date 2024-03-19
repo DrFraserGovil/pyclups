@@ -1,8 +1,8 @@
 #pragma once
-#include "dataArrays.h"
+#include "customTypes.h"
 namespace cyclups::basis
 {
-	typedef double(* basisPointer)(int,double);
+	
 	class Basis
 	{
 		public:

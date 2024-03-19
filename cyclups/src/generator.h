@@ -1,5 +1,6 @@
 #pragma once
 #include "dataArrays.h"
+#include "customTypes.h"
 #include "JSL.h"
 #include <random>
 namespace cyclups

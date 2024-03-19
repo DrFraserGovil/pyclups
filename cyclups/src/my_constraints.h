@@ -1,6 +1,6 @@
 #pragma once
-#include "dataArrays.h"
-#include "constraint.h"
+#include "customTypes.h"
+#include "ConstraintSet.h"
 namespace cyclups::constraint
 {
 	class Integrable: public Constraint

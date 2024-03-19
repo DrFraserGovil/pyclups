@@ -87,7 +87,7 @@ namespace cyclups
 		}
 
 
-		auto c = Constraint.VectorValue();
+		auto c = Constraint.C();
 		auto BzminusC = Store.Bp_blups - c;
 		auto corrector  = B.transpose() * Store.BBt.solve(BzminusC);
 
@@ -102,7 +102,7 @@ namespace cyclups
 
 	double Predictor::ComputeScore(cvec predictX)
 	{
-		Vector BzminusC = Store.Bp_blups - Constraint.VectorValue();
+		Vector BzminusC = Store.Bp_blups - Constraint.C();
 		Vector corrector  = Constraint.B.transpose() * Store.BBt.solve(BzminusC);
 
 		
@@ -126,7 +126,7 @@ namespace cyclups
 		int l = 0;
 		while (!Optimiser.Converged)
 		{
-			Vector dLdc = Store.BBt.solve(Constraint.VectorValue() - Store.Bp_blups);
+			Vector dLdc = Store.BBt.solve(Constraint.C() - Store.Bp_blups);
 			Matrix dcdw = Constraint.Gradient();
 			Vector dLdw = dcdw * dLdc;
 
