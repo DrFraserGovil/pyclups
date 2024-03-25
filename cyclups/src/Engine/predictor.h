@@ -1,13 +1,12 @@
 #pragma once
-#include "basis.h"
-#include "kernel.h"
+#include "../Assumptions/Assumptions.h"
 #include "prediction.h"
 #include "Eigen"
-#include "ConstraintSet.h"
+#include "../Constraints/Constraints.h"
 #include "OptimiserProperties.h"
 namespace cyclups
 {
-	typedef const std::vector<double> &  cvec;
+	
 
 
 	struct Container
@@ -30,28 +29,27 @@ namespace cyclups
 	{
 		public:
 			OptimiserProperties Optimiser;
+
+
+			//needs to be templated because it can accept either a ConstraintSet or a Constraint (or any subclass thereof).
 			template<class T>
-			Predictor(kernel::Kernel k, basis::Basis b, T &constraint) : Kernel(k), Basis(b), Constraint(constraint){
-			};
+			Predictor(kernel::Kernel k, basis::Basis b, T &constraint) : Kernel(k), Basis(b), Constraint(constraint){};
 
-			// Predictor(kernel::Kernel k, basis::Basis b, constraint::ConstraintSet & constraint) : Kernel(k), Basis(b){
-			// 	std::cout << "Specialised" << std::endl;
-
-			// };
-			
-			// template<>
-			// Predictor(kernel::Kernel k, basis::Basis b, constraint::ConstraintSet & constraint);
+		
 			Prediction Predict(cvec predictX, const PairedData & data, cvec dataErrors);
 			Prediction Predict(cvec predictX,const PairedData & data, double dataErrors);
 
+
+			//the Retire function kills off the Constraint object, allowing its data to be returned to its original owner, and hence used (i.e. in a new predictor). This calls the Destructor of the Constraint object without forcing the Predictor to go out of scope. 
 			void Retire();
 		private:
-			Container Store;
+			Container Store; // a place to put lots of useful storage variables
+
 			kernel::Kernel Kernel;
 			basis::Basis Basis;
 			constraint::ConstraintSet Constraint;
+			
 			void Initialise(cvec PredictX, const PairedData & data, cvec dataErrors);
-
 			void Optimise(cvec predictX, const PairedData & data, cvec dataErrors);
 			double ComputeScore(cvec predictX);
 	};

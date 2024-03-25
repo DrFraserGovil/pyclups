@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
-#include "customTypes.h"
+#include "../customTypes.h"
 #include "Constraint.h"
-#include "OptimiserProperties.h"
+#include "../Engine/OptimiserProperties.h"
 namespace cyclups::constraint
 {
 	

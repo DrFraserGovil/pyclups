@@ -728,4 +728,47 @@
 				\item Set $\vec{w}_0 = \psi^{-1}\left(\varphi_j\right)$
 			\end{enumerate}
 			}
+	
+	\newpage
+	\section{Unimodality}
+
+		Consider the constraint 'there is (at most) a single peak'. How might we go about expressing this idea?
+
+		One option is to do an integer optimisation using two concatenated constraints, \verb|c_1 = Monotonic_Positive(t < T)| and \verb|c_2 = Monotonic_Negative(t >= T)|, where \verb|T| is the position of the peak - by performing the optimisation \verb|c_1 + c_2| for every value of $T \in {t_\text{predict}}$, we would find the one which minimised the global MSE of the data, and hence which was the most likely. 
+		
+		However, this requires bootstrapping our algorithm somewhat, and part of the appeal of our approach is that it can handle (supposedly) arbitrary constraints. 
+
+		Instead, I propose we consider the following parameterisation of a unimodal curve:
+		\begin{equation}
+			f(t_i | T, \vec{w}) = \begin{cases} f_0 & i = 0 \\ f(t_{i-1}|t,T) + q(t_i,T) \exp(w_i) & \text{else}\end{cases}
+		\end{equation}
+			
+		Where $q(t,T)$ is a function which obeys:
+		\begin{equation}
+			q(t,T) = \begin{cases}
+				1 & t < T
+				\\
+				 -1 & t > T
+			\end{cases}
+		\end{equation}
+		This is essentially a restatement of our integer optimisation algorithm. However, if we make $q$ a continuous function of $T$, then we may optimise it simultaneously with the rest of the parameters. Consider for example:
+		\begin{equation}
+			q(t,T) = \begin{cases}
+				-1 + \frac{2}{1 + \exp\left(\frac{T - t}{\Delta}\right)}
+			\end{cases}
+		\end{equation} 
+		Where $\Delta$ is some characteristic lengthscale -- it should probably be slightly smaller than the gap between absicssa.
+
+		Since this isn't \textit{quite} a perfect cutoff, there is a chance that there might be some minor multimodality, but it would be significantly less than normal.
+
+		\subsection{Positive-Unimodality}
+
+			Constraining positivity at the same time is somewhat harder than in the pure monotone case since would we need (effectively) to constrain both endpoints to be sure. Therefore, it is easier to rewrite the constraint entirely, as:
+			\begin{equation}
+				f_i = \begin{cases} \exp(w_i) & i == 0
+					\\
+					f_{i-1} \exp(q(t_i,T) w_i^2) & \text{else}
+				\end{cases}
+			\end{equation} 
+			This means we can't use $B = B_\text{derivative}$, and must manually compute the complex derivatives ourselves (rather than letting $B(B^TB)^{-1}$ handle it for us), but this is not in principle a difficult thing to do. I chose to use $w_i^2$ instead of $\exp(w_i)$ to enforce positivity (so that negativity can only arise from $q$) purely for numerical stability, since $\exp(\exp(w_i))$ is scary to me. The fact that $w_i^2$ has two solutions might actually help prevent suffering from node death.
 \end{document}

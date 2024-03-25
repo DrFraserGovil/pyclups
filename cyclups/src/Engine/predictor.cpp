@@ -75,7 +75,6 @@ namespace cyclups
 	{
 		Initialise(predictX,data,dataErrors);
 
-
 		auto B = Constraint.B;
 		auto pblup = Vector::Map(&Store.p_blups[0],predictX.size());
 		Store.Bp_blups = B * pblup;
@@ -124,32 +123,36 @@ namespace cyclups
 		Constraint.SavePosition();
 
 		int l = 0;
-		while (!Optimiser.Converged)
+		if (Optimiser.MaxSteps > 0)
 		{
-			Vector dLdc = Store.BBt.solve(Constraint.C() - Store.Bp_blups);
-			Matrix dcdw = Constraint.Gradient();
-			Vector dLdw = dcdw * dLdc;
-
-			Constraint.Step(dLdw,l,Optimiser);
-
-			if (l % 5 == 0)
+			while (!Optimiser.Converged)
 			{
-				double mse = ComputeScore(predictX);
-				if (mse < bestScore)
+				Vector dLdc = Store.BBt.solve(Constraint.C() - Store.Bp_blups);
+				Matrix dcdw = Constraint.Gradient();
+				Vector dLdw = dcdw * dLdc;
+
+				Constraint.Step(dLdw,l,Optimiser);
+
+				if (l % 1 == 0)
 				{
-					bestScore = mse;
-					Constraint.SavePosition();
+					double mse = ComputeScore(predictX);
+					if (mse < bestScore)
+					{
+						bestScore = mse;
+						Constraint.SavePosition();
+					}
+					
+					Optimiser.CheckConvergence(l,dLdw.norm(),mse);
 				}
-				Optimiser.CheckConvergence(l,dLdw.norm(),mse);
-			}
-			else
-			{
-				Optimiser.CheckConvergence(l,dLdw.norm());
-			}
-			
+				else
+				{
+					Optimiser.CheckConvergence(l,dLdw.norm());
+				}
+				
 
-			++l;
-		};
+				++l;
+			}
+		}
 		Constraint.RecoverPosition();
 		Optimiser.PrintReason();
 	}

@@ -72,7 +72,7 @@ void cyclups::constraint::ConstraintSet::Initialise(const std::vector<double> &t
 {
 	for (int i = 0; i < Constraints.size(); ++i)
 	{
-		Constraints[i]->Initialise(t);
+		Constraints[i]->CallInitialiser(t);
 	}
 	//can't add matrices together until size determined
 	Dimension = 0;
@@ -133,7 +133,8 @@ cyclups::Matrix &cyclups::constraint::ConstraintSet::Gradient()
 		int wDim = Constraints[i]->TransformDimension;
 		if (wDim > 0)
 		{
-			Grad.block(w_Ind,c_Ind,wDim,dim) << Constraints[i]->vector.Gradient();
+			auto & r = Constraints[i]->vector.Gradient();
+			Grad.block(w_Ind,c_Ind,wDim,dim) << r;
 		}
 		c_Ind += dim;
 		w_Ind += wDim;
@@ -148,6 +149,7 @@ void cyclups::constraint::ConstraintSet::Step(Vector &grad, int l, const Optimis
 	{
 		int dim = Constraints[i]->TransformDimension;
 		auto v = VectorSlice(grad,start,dim);
+		Constraints[i]->vector.Step(v,l,op);
 		start += dim;
 	}
 }
