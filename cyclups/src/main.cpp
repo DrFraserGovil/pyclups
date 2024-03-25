@@ -3,15 +3,6 @@
 
 #include "cyclups.h"
 
-// #include "dataArrays.h"
-// #include "generator.h"
-
-// #include "kernel.h"
-// #include "basis.h"
-// #include "predictor.h"
-// #include "constraintVector.h"
-// #include "my_constraints.h"
-
 void Curve(JSL::gnuplot & gp, cyclups::PairedData curve, std::string name, double (*func)(double))
 {
 	namespace lp = JSL::LineProperties;
@@ -48,8 +39,8 @@ void Plot(cyclups::functionPointer trueFunc, cyclups::PairedData data, cyclups::
 
 double testFunc(double x)
 {
-	x = x +0.6;
-	return 1.0/(1 + exp(-x));
+	// x = x +0.6;
+	// return 1.0/(1 + exp(-x));
 	return 1.0/sqrt(2*M_PI) * exp( - x*x/2);
 }
 
@@ -62,13 +53,13 @@ int main(int argc, char**argv)
 	srand(Seed);
 
 	//generate sample
-	double xmin = -10;
-	double xmax = 10;
+	double xmin = -3;
+	double xmax = 3;
 	int res = 21;
 	auto D = cyclups::generator::NoisyXSample(res,testFunc,xmin,xmax,0.05);
 
 	//define predictor
-	auto c2 = cyclups::constraint::Unimodal();
+	auto c2 = cyclups::constraint::Integrable(1);
 	auto combined = c2;
 	auto K = cyclups::kernel::SquaredExponential(0.1,1);
 	auto B = cyclups::basis::Hermite(3);
