@@ -54,9 +54,9 @@ namespace cyclups::constraint
 				transformOperator inv = [](Vector & output, const Vector & input,std::vector<double> & params){for (int i =0; i < output.size(); ++i){
 					// double buffered = std::max(input[i],1e-8);
 					output[i] = log(0.02);
-				}output[output.size()-1] = 4;
+				}output[output.size()-1] = 0;
 				};
-				ConstraintVector c = ConstraintVector::Optimise(n,n+1,f,grad,inv);
+				ConstraintVector c = ConstraintVector::Optimise(n,n+1,FullTransform(f,grad,inv));
 				std::vector<double> v = t;
 				// v.push_back(t[1] )
 				c.SetParams(v);

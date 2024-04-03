@@ -6,13 +6,13 @@ namespace cyclups::constraint
 	{
 	
 	}
-	ConstraintVector ConstraintVector::Optimise(int cDimension, int wDimension,transformOperator transform, transformOperator transformDerivative, transformOperator inverse)
+	ConstraintVector ConstraintVector::Optimise(int cDimension, int wDimension,SeparableTransform F)
 	{
-		return ConstraintVector(cDimension,wDimension,transform,transformDerivative,inverse);
+		return ConstraintVector(cDimension,wDimension,F);
 	}
-	ConstraintVector ConstraintVector::Optimise(int cDimension, int wDimension, transformOperator transform, gradientOperator transformDerivative, transformOperator inverse)
+	ConstraintVector ConstraintVector::Optimise(int cDimension, int wDimension, FullTransform F)
 	{
-		return ConstraintVector(cDimension,wDimension,transform,transformDerivative,inverse);
+		return ConstraintVector(cDimension,wDimension,F);
 	}
 
 	ConstraintVector ConstraintVector::Constant(int dimension, double value)
@@ -25,6 +25,7 @@ namespace cyclups::constraint
 	{
 		return ConstraintVector(dimension,value);
 	};
+
 
 	Vector & ConstraintVector::Value()
 	{
@@ -41,19 +42,27 @@ namespace cyclups::constraint
 	{
 		if (simpleGradient)
 		{
-			simpleDerivative(spoofgradient,W,TransformParams);
+			SimpleFunction.GradF(spoofgradient,W,TransformParams);
 			gradient = spoofgradient.asDiagonal();
 		}
 		else
 		{
-			derivative(gradient,W,TransformParams);
+			FullFunction.GradF(gradient,W,TransformParams);
 		}
 		return gradient;
 	}
 
 	void  ConstraintVector::Initialise(const Vector & c)
 	{
+		Optim_M = Vector::Zero(TransformDimension);
+		Optim_V = Vector::Zero(TransformDimension);
+		BoundStep = 0;
 		Inverse(W,c,TransformParams);
+		gradient = Matrix::Zero(TransformDimension,Dimension);
+		if (spoofgradient.size() > 0)
+		{
+			spoofgradient = Vector::Zero(TransformDimension);
+		}
 	}
 
 	void  ConstraintVector::Step(VectorSlice v, int l, const OptimiserProperties & op)
@@ -112,14 +121,14 @@ namespace cyclups::constraint
 		TransformDimension = 0;
 		value = Vector::Map(&values[0],dimension);
 	}
-	ConstraintVector::ConstraintVector(int vectorDimension, int internalDimension, transformOperator transform, gradientOperator transformDerivative, transformOperator inverse)
+	ConstraintVector::ConstraintVector(int vectorDimension, int internalDimension, InvertableDifferentiableFunction<transformOperator,gradientOperator,transformOperator> F)
 	{
 		
 		Dimension = vectorDimension;
 		TransformDimension = internalDimension;
-		Transform = transform;
-		derivative = transformDerivative;
-		Inverse = inverse;
+		FullFunction = F;
+		Transform = F.F;
+		Inverse = F.Inverse;
 		simpleGradient = false;
 		gradient = Matrix(internalDimension,vectorDimension);
 		W = Vector(TransformDimension);
@@ -128,16 +137,19 @@ namespace cyclups::constraint
 		Optim_M = Vector::Zero(TransformDimension);
 		Optim_V = Vector::Zero(TransformDimension);
 	}
-	ConstraintVector::ConstraintVector(int vectorDimension, int internalDimension, transformOperator transform, transformOperator transformDerivative, transformOperator inverse)
+	ConstraintVector::ConstraintVector(int vectorDimension, int internalDimension, InvertableDifferentiableFunction<transformOperator,transformOperator,transformOperator> F)
 	{
 		Dimension = vectorDimension;
 		TransformDimension = internalDimension;
 		
-		Transform = transform;
-		simpleDerivative = transformDerivative;
-		Inverse = inverse;
+		// Transform = transform;
+		// simpleDerivative = transformDerivative;
+		// Inverse = inverse;
+		SimpleFunction = F;
+		Transform = F.F;
+		Inverse = F.Inverse;
 		simpleGradient = true;
-		gradient = Matrix(vectorDimension,internalDimension);
+		gradient = Matrix(internalDimension,vectorDimension);
 		spoofgradient = Vector(vectorDimension);
 		W = Vector(TransformDimension);
 		Psi = Vector(TransformDimension);

@@ -14,7 +14,7 @@ key = 0
 if len(sys.argv) > 1:
 	key = int(sys.argv[1])
 
-high = 500
+high = 10
 low = 300
 if key == 0:
 	pyclups.analysis.RunTest(

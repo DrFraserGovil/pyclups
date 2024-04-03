@@ -9,10 +9,10 @@ class OptimiserProperties
 		public:
 			bool Converged = false;
 			double alpha = 0.1;
-			double b1 = 0.8;
+			double b1 = 0.7;
 			double b2 = 0.9;
 			double ConvergenceMemory = 0.99;
-			int MaxSteps= 1500;
+			int MaxSteps= 4000;
 			int MinSteps = 5;
 
 			double ConvergedGradient = 1e-8;

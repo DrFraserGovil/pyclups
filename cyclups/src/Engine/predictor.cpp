@@ -131,6 +131,7 @@ namespace cyclups
 				Matrix dcdw = Constraint.Gradient();
 				Vector dLdw = dcdw * dLdc;
 
+
 				Constraint.Step(dLdw,l,Optimiser);
 
 				if (l % 1 == 0)
@@ -154,7 +155,7 @@ namespace cyclups
 			}
 		}
 		Constraint.RecoverPosition();
-		Optimiser.PrintReason();
+		// Optimiser.PrintReason();
 	}
 
 	void Predictor::Retire()

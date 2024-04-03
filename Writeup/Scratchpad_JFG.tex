@@ -771,4 +771,394 @@
 				\end{cases}
 			\end{equation} 
 			This means we can't use $B = B_\text{derivative}$, and must manually compute the complex derivatives ourselves (rather than letting $B(B^TB)^{-1}$ handle it for us), but this is not in principle a difficult thing to do. I chose to use $w_i^2$ instead of $\exp(w_i)$ to enforce positivity (so that negativity can only arise from $q$) purely for numerical stability, since $\exp(\exp(w_i))$ is scary to me. The fact that $w_i^2$ has two solutions might actually help prevent suffering from node death.
+
+	\section{Regularisation}
+
+		Let us suppose that we want to add some form of Regularisation to our CLUPS methodology. We limit ourselves to the case where the Regularisation is imposed on $\vec{Z}$-space, i.e:
+
+		\begin{equation}
+			\mathcal{L} = \mathcal{L}_\text{clups}(\{\vec{a}\}) + R(\{\vec{a}\cdot\vec{X}\}) 
+		\end{equation}		
+		There are two ways to go about this:
+		
+		\subsection{Explicit Forcing}
+			We abandon our lovely conceit of linear constraints, and let $B = I$ and $\vec{c} = \vec{p}(\vec{w})$, where $\vec{p}$ is a vector transform function which ensures that for all $\vec{w} \in \mathbb{R}^s$, $\vec{c}$ is a vector which satisfies the constraints. How this is achieved is irrelevant, other than that the function be differentiable.
+			
+			We therefore have that the CLUPS is:
+			\begin{equation}
+				\vec{a}^\text{CLUPS}_j = \vec{a}^\text{BLUP}_j - \frac{1}{D^T K^{-1} X} \left(Z^\text{blup} - \vec{p}(\vec{w})\right)_j K^{-1} \vec{D}
+			\end{equation}
+			We have therefore converted the Lagrangian into a function of $\vec{w}$:
+			\begin{equation}
+				\mathcal{L} = \left[ \sum_j \left(\text{Var}(Z_{t_j}) + \vec{a}^\text{CLUPS}_j \cdot K \vec{a}^\text{CLUPS}_j - 2 \vec{a}^\text{CLUPS}_j \cdot \vec{k}_j \right) \right] + R(p(\vec{w}))
+			\end{equation}
+			The terms involving $\vec{\mu}$ and $\vec{\lambda}$ have vanished since, by virtue of our reformalisation, they are equal to zero.
+
+			As we did with inexact constraints, we may then take the derivative w.r.t $\vec{w}$:
+
+			\begin{equation}
+					\pdiv{L}{\vec{w}} = 2\left(\pdiv{\vec{p}}{\vec{w}}\right)^T \left((\vec{p} - \vec{Z}^\text{BLUPS}) - \pdiv{R}{\vec{p}} \right)
+			\end{equation}
+			If our Regularisation function was a smoothing kernel:
+			\begin{equation}
+				R(\vec{p}) = \Omega \sum_j (p_{j+1} - p_j)^2
+			\end{equation}
+			Then:
+			\begin{equation}
+				\pdiv{R}{p_i} = \begin{cases}
+					2\Omega (p_0 - p_1) & i = 0
+					\\
+					2\Omega (2p_j - p_{j-1} - p_{j+1}) & \text{else}
+				\end{cases}
+			\end{equation}
+		\subsection{Implicit Forcing}
+
+			The abandoning of our lovely linearised constraints, however, feels sad. It would be nice if we could find a way to keep the modular nature. 
+
+			If the constraint matrix $B$ is invertible, then it is possible to set:
+			\begin{equation}
+				\vec{p} = B^{-1} \vec{c}(\vec{w}) ~~\longleftrightarrow~~ \pdiv{\vec{p}}{\vec{c}} = {B^{-1}}^T
+			\end{equation}
+			Therefore:
+			\begin{equation}
+				\pdiv{R}{\vec{c}} = {B^{-1}}^T \pdiv{R}{\vec{p}}
+			\end{equation}
+			Hence we can then put this back together to find:
+			\begin{equation}
+				\pdiv{L}{\vec{w}} = 2\left(\pdiv{\vec{c}}{\vec{w}}\right)^T \left((BB^T)^{-1}(\vec{c} - B\vec{Z}^\text{BLUPS}) - {B^{-1}}^T\pdiv{R}{\vec{p}} \right)
+		\end{equation}
+
+		If $B$ is not invertible (or even, non-square), however, we can generally find some way to bulk it up into an invertible matrix, by introducing a number of 'unconstraining constraints' -- i.e. $B_{ij} = 1$ and $c_i = w_i$. For example, an even bulked-up constraint might look like:
+
+		\begin{equation}
+			B = \begin{pmatrix}
+				1 & 0 & 0 & \hdots & 0& 0  & -1
+				\\
+				0 & 1 & 0 & \hdots & 0 & -1 & 0
+				\\
+				0 & 0 & 1 & \hdots & -1 & 0 & 0
+				\\
+				&&&\vdots&&&
+				\\
+				1 & 0 & 0 & \hdots & 0 & 0 & 0
+				\\
+				0 & 1 & 0 & \hdots & 0 & 0 & 0
+				\\
+				0 & 0 & 1 & \hdots & 0 & 0 & 0
+				\\&&&\vdots&&&
+			\end{pmatrix}~~~~~~\vec{c}(\vec{w}) = \begin{pmatrix}
+				0
+				\\
+				0
+				\\
+				0
+				\\
+				\vdots
+				\\
+				w_1
+				\\
+				w_2
+				\\
+				w_3
+				\\
+				\vdots\end{pmatrix}
+		\end{equation}
+	\clearpage
+	\renewcommand\vec[1]
+	{
+		\boldsymbol{\mathbf{#1}}
+	}
+	\section{On Predictor-Forcing}
+
+		The key conceit which allows the BLP and all its descendants to function is the change from optimising in predictor- (or $\vec{z}-$) space to working in moment- (or $\vec{a}$-) space. This is because we do not know the behaviour of the underlying `truth' which makes it impossible to directly optimise $\vec{z}$, whilst our assumptions \textit{do} allow us to optimise against $\vec{a}$.
+
+		This coordinate change (though necessary for the entire mathematical machinery to function) is highly inconvenient whenever you need to impose limitations on the optimisation within predictor-space. $\vec{z}$ and $\{\vec{a}\}$ are related to each other by $\hat{Z}_i = [\vec{z}]_i = \vec{a}_i \cdot \vec{X}$, by definition of the Linear Predictor. This is, however, a non-invertible relationship: knowing $\vec{a}$ guarantees knowledge of $\vec{z}$, but the inverse is not true: there are multiple different sets of $\{\vec{a}\}$ which produce a given $\vec{z}$. This is why the optimisation must be carried out within moment-space, since we cannot rewrite our cost function (the MSE) in terms of $\vec{z}$.
+
+		The language of the CLUPS, however, provides us with a way to uniquely generate a set of $\{\vec{a}\}$ from a provided $\vec{z}$ in a very simple fashion: we simply set $B = I$ and $\vec{c} = \vec{z}$, then:
+		\begin{equation}
+			\vec{a}^\text{forced}_i = \vec{a}_i^\text{blup} + \frac{1}{\vec{D}\cdot K^{-1} \vec{X}} \left(z_i - \hat{Z}^\text{blup}_i \right) K^{-1} \vec{D} \label{E:Forcing}
+		\end{equation}
+		Taking the dot product with respect to $\vec{X}$:
+		\begin{spalign}
+			\hat{Z}_i^\text{forced} & = \vec{a}_i^\text{forced} \cdot \vec{X}
+			\\
+			& = \hat{Z}_i^\text{blup} + \frac{\vec{X} \cdot K^{-1} \vec{D}}{\vec{D} K^{-1} \vec{X}} (z_i- \hat{Z}_i^\text{blup})
+			\\
+			&= z_i
+		\end{spalign}
+		By the definition of the CLUPS as being the constraint-obeying function which lies closest to the BLUP (with the MSE as the measure of 'closeness'), it therefore follows that of all the possible sets of $\{\vec{a}\}$ which produce $\hat{Z}_j = z_j$, \eref{E:Forcing} is the one which minimises the MSE. That is, this is a unique way of inverting the Linear Predictor $\vec{a}_i = \vec{a}_i(\vec{z})$ such that the MSE is minimised.
+
+		We term this method -- of generating a CLUPS where the constraint is that the predictor is some known value -- \textbf{predictor-forcing}. It is natural, however, to ask what the use of this is: if we already know $\vec{z}$, then surely our job is completed. After all, the entire purpose of the BL(U)P and CL(U)P was to use $\vec{a}$ to \textit{predict} $\vec{z}$.
+
+		Predictor-forcing is a more explicit version of the technique we utilised for solving inexact constraints, in which we set $\vec{c} = \vec{c}(\vec{w})$, and hence we were able to rewrite our Lagrangian as a function only of $\vec{w}$:
+		\begin{equation}
+			\mathcal{L}(\vec{w}) = \sum_i \vec{a}_i(\vec{w}) \cdot K \vec{a}_i(\vec{w})- 2 \vec{k}_i \cdot\vec{a}_i(\vec{w})
+		\end{equation}
+		In the case of the CLUPS, $\vec{c}$ ensured that we were optimising only over the set of functions which obeyed the constraints, and since we knew that the CLUPS gave the minimal value of the MSE for each proposed value of $\vec{w}$, we could therefore guarantee that the value of $\vec{w}$ which minimised the MSE was indeed the best CLUPS which obeyed the constraints. In short, the CLUPS provided us with a way to invert $\vec{a} = \vec{a}(\vec{c}(\vec{w}))$ in a MSE-minimising fashion. 
+
+		In a similar vein, in the case of predictor-forcing, if we let $\vec{z} = \vec{z}(\vec{w})$ then we now have a way directly propose a functional parameterisation of $\vec{z}$ which we can then optimise by writing the Lagrangian in terms of $\vec{a}_i^\text{forced}(\vec{w})$. Since we know that predictor-forcing projects into the space of MSE-minimising $\vec{a}$, we are safe in the knowledge that:
+		
+		\begin{equation}
+			\text{min}_{\vec{w}}\left[\mathcal{L}(\vec{a}(\vec{w}))\right] = \text{min}_{\vec{a}}\left[\mathcal{L}(\vec{a})|\text{constraints of parameterisation}\right].
+		\end{equation}
+		
+		This again might seem to defeat the point of the Linear Predictor (which is non-parametric), but we could have $\vec{z}(\vec{w}) = \vec{w}$. In this case, it is obvious from the definition of the CLUPS derivative that this reaches its optimum when $\vec{w} = \vec{\hat{Z}}^\text{BLUP}$, and that such a parameterisation is therefore utterly non-constraining.
+		
+		Nevertheless, our parameterisations could also serve as constraints, for example:
+		\begin{equation}
+			[\vec{z}(\vec{w})]_i = \frac{\mathcal{I}/\Delta x}{\sum_i^{N-1} q_i w_i} w_i ~~~~~~~~q_i = \begin{cases} 0.5 & i = 0,  N-1 \\ 1 & \text{else} \end{cases}
+		\end{equation}
+
+		This is a way of expressing '$\vec{z}$ is a function-sample which integrates to $\mathcal{I}$', but which does not impose a parametric form on the output. 
+		
+		{\it This was in fact my original approach to developing the CLUPS -- the benefit of the linear algebra methodology we have now developed is that, for exact constraints, it does not require optimisation, and is therefore orders of magnitude quicker to compute.}
+
+		Predictor-forcing, therefore, is a means by which we can re-express our problem set back into $\vec{z}-$space, whilst still optimising over the statistically valid cost function `in the background'.
+
+		The downside of this, however, is that we lose the analytical nature of the CLUPS in even the simple exact constraint cases -- we must fully optimise $\vec{z}(\vec{w})$ every time. 
+
+		Predictor-Forcing is also distinguished (marginally) from our normal inexact constraint formalism, since it requires exact specification of the full functional form of $\vec{z}$ (and hence its derivatives), whilst the normal CLUPS machinery requires you to specify $B$ and $\vec{c}$. In some cases, the encoding is identical (positive encoding for both, for example, uses $\vec{c}_i = \vec{z}_i = \exp(w_i)$)
+		
+		The CLUPS machinery, however, often let us specify our constraints in much simpler ways. For example, in the case of the monotonic predictor, we used:
+		\begin{align}
+			B_{ij} & = \delta_{i,j-1} - \delta{ij}
+			\\
+			[\vec{c}(\vec{w})]_i & = \exp(w_i)
+			\\
+			\pdiv{\vec{c}}{\vec{w}}_{ij} & = \exp(w_i) \delta_{ij}
+		\end{align}
+		If we were to rewrite this in the language of predictor-forcing, however:
+		\begin{align}
+			z_i & = \begin{cases} w_i & i = 0
+				\\
+				 z_{i-1} + \exp(w_i) & \text{else}\end{cases}
+			\\
+			\pdiv{z_i}{w_j} & = \begin{cases}
+				1 & j = 0
+				\\
+				\exp(w_j) & i \geq j, j > 0
+				\\
+				0 & \text{else}
+			\end{cases}
+		\end{align}
+		That is, the CLUPS formalism and predictor-forcing are identical whenever there is an inexact constraint and $B = I_{m\times m}$, but otherwise the CLUPS formalism contains a lot less redundancy and, as such, there are therefore only a limited number of places where Predictor-Forcing is preferred to the normal CLUPS:
+
+		\begin{enumerate}
+			\item A complex non-linear constraint which cannot be written in the simple form $B\vec{z} = \vec{c}$ without using $B = I$.
+			\item Error analysis, where proposing a new set of $\vec{z}$ and comparing the score is a necessary part of the analysis
+			\item Regularisation, where the optimisation must \textit{penalise} (but not \textit{forbid}) certain configurations of $\vec{z}$.
+		\end{enumerate}
+
+		\subsection{Regularisation}
+
+			Regularisation, when applied to a curve-fitting exercise, attempts to penalise certain outcomes in order to prevent over-fitting. A regularisation term is then added into the Lagrangian - this term is small when the model is 'well behaved', and large when it is not.
+			\begin{equation}
+				\mathcal{L}^\prime = \mathcal{L} + R^\text{regular}
+			\end{equation}
+
+			In a normal BLUP, the regularisation must take place in $\vec{a}-$space -- \textcolor{red}{in fact, the addition of the data-error terms into the kernel matrix is functioning as a form of regularisation by forcing the model to consider that the datapoints may not be 100\% trustworthy (JFG: I think this is true, right? It certainly \textit{looks} like a $\ell_2$ regularisation)}.
+
+			However, if our regularisation term is being imposed due to a prior belief we have about the model (rather than a solution oriented "let's chuck in a regularisation term and hope it makes things better"), then this belief is often expressed in terms of $\vec{z}$, rather than $\vec{a}$ -- for example, a reasonable prior on a model would be \textit{the model should be smooth}, or \textit{the model should have a continuous gradient}, both of which could be expressed as:
+			\begin{align}
+				R_\text{smooth}(\vec{z}) &=  \Omega \sum_{i=0}^{m-1} (z_{i+1} - z_i)^2
+				\\
+				R_\text{curve}(\vec{z}) &=  \Lambda \sum_{i = 0}^{m-2} (z_{i+2} - 2 z_{i+1} + z_i)^2
+			\end{align}
+			It is clear that in the BLUP, we have no way to impose such prior knowledge (although, to be fair, unless an exceptionally strange kernel is being used, BLUPS tend to be extremely smooth by nature!), and so regularisation functions of the form $R^\text{regular}(\vec{z})$ are intractable. 
+
+			However, if we used predictor-forcing of the form $\vec{z} = \vec{w}$ (the unconstraining-constraint, the optimum of which lies at $\vec{w} = \vec{\hat{Z}}^\text{BLUP}$), we can then formulate:
+			\begin{align}
+				\vec{a}_i(\vec{w}) & =  \vec{a}_i^\text{BLUP} + \frac{1}{\vec{D}\cdot K^{-1} \vec{X}} \left(w_i - \hat{Z}^\text{blup}_i \right) K^{-1} \vec{D}
+				\\
+				\mathcal{L}^\prime & = \sum_i \left[ \vec{a}_i(\vec{w}) \cdot K \vec{a}_i(\vec{w})- 2 \vec{k}_i \cdot\vec{a}_i(\vec{w})\right] + R(\vec{w}) 
+			\end{align}
+			We note that whilst the Lagrangian is unpleasant to write as an explicit function of $\vec{w}$, its derivative simplifies hugely:
+			\begin{equation}
+				% \pdiv{\mathcal{L}}{\vec{w}} = \left[ \pdiv{\vec{z}}{\vec{w}} \right]^T \left( 2\vec{z}(\vec{w}) - 2\vec{\hat{Z}}^\text{BLUP}+ \left.\pdiv{R}{\vec{p}}\right|_{\vec{p} = \vec{p}(\vec{w})}\right)
+				\pdiv{\mathcal{L}}{\vec{w}} =  \left( 2\vec{w} - 2\vec{\hat{Z}}^\text{BLUP}+ \left.\pdiv{R}{\vec{z}}\right|_{\vec{z} = \vec{w}}\right)
+			\end{equation}
+		
+			We can see that if $R = 0$, then the function is trivially optimised at $\vec{w}=\vec{\hat{Z}}^\text{BLUP}$, as we would expect. If $R \neq 0$, however, we can see that the position of the optimum will move, with the strength of the deviation depending on how large $R$ is.
+
+			This therefore defines a $\vec{z}-$regularised BLUP, which we term the rBLUP.
+
+		\subsection{Regularised CLUPS}
+
+			We can also regularise a CLUPS. One option for doing this is directly analogous to the rBLUP, but rather than $\vec{z} = \vec{w}$, we instead set up a transform $\vec{z} = \vec{\phi}(\vec{w})$ where $\vec{\phi}$ is a function which guarantees for all $\vec{w} \in \mathbb{R}^d$ that the constraint is obeyed - it is then as simple as modifying the rBLUP identity:
+			\begin{equation}
+				\pdiv{\mathcal{L}}{\vec{w}} = \left[ \pdiv{\vec{\phi}}{\vec{w}} \right]^T \left( 2\vec{z}(\vec{w}) - 2\vec{\hat{Z}}^\text{BLUP}+ \left.\pdiv{R}{\vec{z}}\right|_{\vec{z} = \vec{\phi}(\vec{w})}\right)
+			\end{equation}
+			This, however, requires that we specify a transform, instead of using the same linear algorithm language we had already identified previously. From a computational standpoint, this is suboptimal since we would need to either:
+			\begin{itemize}
+				\item Abandon the linear algebra language and write everything in terms of a functional transform (and hence numerically optimise constraints for which an exact solution exists)
+				\item Write every constraint twice -- once in linear algebra, and once in terms of a functional transform.
+			\end{itemize}
+			Luckily, there is indeed a way in which we can regularise a CLUPS using the formalism we have already created, using $B$ and $\vec{c}$. 
+
+			We can do this trivially in the case where $B$ is a square matrix. In which case, we must assume that $\vec{c} = \vec{c}(\vec{w})$, since a square exact-constraint matrix cannot be regularised (since $m$-predictors with $m$-exact constraints are defined fully by the constraint, not by the statistical machinery of the CLUPS/BLUP).
+
+			
+			
+			Our definition of 'valid constraints' requires that $BB^T$ be invertible -- therefore if $B$ is valid and square, it therefore automatically follows that $B$ is invertible. Therefore, in this case, specifying $\vec{c}$ is equivalent to specifying $\vec{z}$:
+			\begin{equation}
+				\vec{z} = B^{-1} \vec{c}(\vec{w})
+			\end{equation}
+
+			Therefore, the regularised-Lagrangian becomes:\def\aj{\vec{a}_j(\vec{w})}
+			\begin{spalign}
+				\mathcal{L} &= \left[ \sum_j \aj \cdot K \aj - 2 \vec{k}_j \cdot \aj\right] + R\left(B^{-1} \vec{c}(\vec{w})\right)
+				\\
+				\aj & = \vec{a}^\text{BLUP} - \frac{1}{\vec{D} \cdot K^{-1} \vec{X}} \left[B^T (BB^T)^{-1}(B \vec{\hat{Z}} - \vec{c}(\vec{w}))\right]_j K^{-1} \vec{D}
+			\end{spalign}
+			We can then optimise with respect to $\vec{w}$ using our existing formalism:
+			\begin{spalign}
+				\pdiv{\mathcal{L}}{\vec{w}} & =  \pdiv{c}{\vec{w}}^T \left[ -2(BB^T)^{-1}(B\vec{\hat{Z}} - \vec{c}(\vec{w})) + {B^{-1}}^T \pdiv{R}{\vec{z}}\right]
+				\\
+				& = \pdiv{c}{\vec{w}}^T {B^{-1}}^T \left[ 2 \left( B^{-1} \vec{c}(\vec{w}) - \vec{\hat{Z}} \right) + \pdiv{R}{\vec{z}} \right]
+				\\
+				& = \left( B^{-1} \pdiv{\vec{c}}{\vec{w}} \right)^T \left[ 2 \left( B^{-1} \vec{c}(\vec{w}) - \vec{\hat{Z}} \right) + \pdiv{R}{\vec{z}} \right]
+			\end{spalign}
+		
+
+			\subsubsection{Bulking Up}
+				In the case where $B$ is \textit{not} square, there does always exist a square matrix $B^\prime$ and associated vector $\vec{c}^\prime$ such that the CLUPS prediction is identical (or rather, I hope that this suffices as a proof of this).
+
+				A valid constraint matrix $B$ (either associated with inexact or exact constraints) with size $q \times m$ constrains $q$ degrees of freedom in the predictor. This means that there are $m - q$ prediction points which are not constrained.
+				
+				As we have already identified, if the element $z_i$ is unconstrained, then adding in a constraint of the form $B_{ik} = \delta_{ik}$, $c_i = w_\ell$ into $B$ and $\vec{c}$ does nothing to constrain $z_i$ further -- it merely adds to the dimensionality of our computations (something we have wished to avoid up until this point).
+				
+				Therefore, there must be $m-q$ points for which we can add in 'unconstraining constraints', without altering the solution. Identifying which points can be (un)constrained is not necessarily trivial, and depends on the form of $B$. We propose the following algorithm for determining which prediction-points can be (un)constrained in $B^\prime$.
+				\setcounter{MaxMatrixCols}{20}
+				\begin{enumerate}
+					\item Set up a vector of length $m$, initialised to zeros. $\vec{\gamma} = (0,0,0,0,\hdots)$
+					\item Iterate through $B$ row-by-row. 
+					\begin{itemize}
+						
+						\item For each row $[\vec{b}^{(i)}]_j = B_{ij}$, identify the right-most nonzero element for which $\gamma_j = 0$
+						\begin{align*}
+							\begin{matrix}
+								\vec{\gamma} & = (& 0 & 0 & 0 & \hdots & 0 & \color{blue} 0 & \color{red} 1 & 0 & 0 & )
+								\\
+								\vec{b} & = (& 0.5 & 1 & -1 & \hdots & 0 & {\color{blue}-3} & {\color{red} 7}& 0 &0 &)
+							\end{matrix}
+							% \vec{c} & = (0,0,0,0,0,0,\hdots,0,{\color{blue}0},{\color{red} 1},0,0)
+							% \\
+							% \vec{b} & =  (0,0,1,-1,0,0.3,\hdots,0,{\color{blue}-1},{\color{red} 1},0,0)
+						\end{align*}
+						In this example, the $b_j = 7$ element is ignored, since the corresponding $\gamma_j = 1$ from a previous iteration.
+						\item Let $k$ be the index of this element, let $\gamma_k = 1$ and move on to the next row
+						\begin{align*}
+							\begin{matrix}
+								\vec{\gamma} & = (& 0 & 0 & 0 & \hdots & 0 & \color{blue} 1 & \color{red} 1 & 0 & 0 & )
+							\end{matrix}
+						\end{align*}
+					\end{itemize}
+					\item The vector $\vec{\gamma}$ should then have $m - q$ remaining 0 elements.
+					\item We then set $\mathcal{U} \in R^{m-q\times q}$, the 'unconstraining matrix, such that $\mathcal{U}_{iq} = 1$ where $q$ is the index of the $i^\text{th}$ zero in $\vec{\gamma}$:
+					\begin{align*}
+						\vec{\gamma} = (0,1,1,0,1,0,0) ~~\Longrightarrow~~ \mathcal{U} = \begin{pmatrix}
+							1 & 0 & 0 & 0 & 0 & 0 & 0
+							\\
+							0 & 0 & 0 & 1 & 0 & 0 & 0
+							\\
+							0 & 0 & 0 & 0 & 0 & 1 & 0
+							\\
+							0 & 0 & 0 & 0 & 0 & 0 & 1
+						\end{pmatrix}
+					\end{align*} 
+					\item We can then use our normal constraint-concatenation methods: 
+					\begin{align*}
+						B^\prime = \begin{bmatrix}  B \\ \mathcal{U} \end{bmatrix} ~~~~~ \vec{c}^\prime \left(\begin{bmatrix}	 \vec{w} \\ \vec{w}^\prime 
+						\end{bmatrix}\right) = \begin{bmatrix}	 \vec{c}(\vec{w}) \\ \vec{w}^\prime 
+						\end{bmatrix}
+					\end{align*}
+				\end{enumerate}
+				The algorithm above serves to identify which elements of the predictor set are not linearly dependent on any of the others via the constraints. Therefore, by construction, the rows of the matrix $B^\prime$ are linearly independent, and hence $B^\prime$ is square and valid, and hence invertible. We can therefore insert $B^\prime$ into the rCLUPS formalism discussed above. 
+				
+				This method allows us to automatically extend our linear algebra formalism without the need to specify things multiple times. 
+
+				
+				{\it Can we come up with a more convincing proof that this algorithm \textbf{always} generates a valid $B^\prime$?}
+				\subsubsection{An example}
+
+					As a worked example, consider the integral constraint on a 5-dimensional predictor:
+					\begin{equation}
+						B = (0.5,1,1,1,0.5)~~~c = \mathcal{I}/\Delta x
+					\end{equation}
+					The resulting $B^\prime$ for this is:
+					\begin{equation}
+						B^\prime = \begin{pmatrix}
+							0.5 & 1 & 1 & 1 & 0.5
+							\\
+							1 & 0 & 0 & 0 & 0
+							\\
+							0 & 1 & 0 & 0 & 0
+							\\
+							0 & 0 & 1 & 0 & 0
+							\\
+							0 & 0 & 0 & 1 & 0
+						\end{pmatrix}
+						~~~~~\vec{c}^\prime(\vec{w}) = \begin{pmatrix}
+							\mathcal{I}/\Delta x
+							\\
+							w_0
+							\\
+							w_1
+							\\
+							w_2
+							\\
+							w_3
+						\end{pmatrix}
+					\end{equation}
+					The inverse of $B$ can be easily computed:
+					\begin{equation}
+						{B^\prime}^{-1} = \begin{pmatrix} 0 & 1 & 0 & 0 & 0
+							\\
+							0 & 0 & 1 & 0 & 0
+							\\
+							0 & 0 & 0 & 1 & 0
+							\\
+							0 & 0 & 0 & 0 & 1
+							\\
+							2 & -1 & -2 & -2 & -2\end{pmatrix} ~~~\Longleftrightarrow~~~\vec{p}(\vec{w}) = \begin{pmatrix}
+								w_0
+								\\
+								w_1
+								\\
+								w_2
+								\\
+								w_3
+								\\
+								\frac{2\mathcal{I}}{\Delta x} - (w_0 + 2 w_1 + 2w_2 + 2w_3)
+							\end{pmatrix}
+					\end{equation}
+					
+
+	% 	Therefore, rather than writing $B = [0.5,1,1,1,1\vdots,0.5]$ for the integral constraints, we might have (With $q_j$ a suitable abscissa-weighting scheme):
+	% 	\begin{equation}
+	% 		[\vec{\phi}(\vec{w})]_i = \frac{\mathcal{I}}{\Delta x \sum_j q_j w_j} w_i
+	% 	\end{equation}
+	% 	We can use this to generate a suitable set of $\vec{a}^\text{forced}$:
+	% 	\begin{equation}
+	% 		\vec{a}^\text{forced}_i = \vec{a}_i^\text{blup} + \frac{1}{\vec{D}\cdot K^{-1} \vec{X}} \left(\frac{\mathcal{I}}{\Delta x \sum_j q_j w_j} w_i - \hat{Z}^\text{blup}_i \right) K^{-1} \vec{D}
+	% 	\end{equation}
+	% 	From which we can generate a MSE:\def\ab{\vec{a}_i^\text{blup}}\def\di{\vec{\delta}_i}
+	% 	\begin{align}
+	% 		\text{MSE} &= \sum_i \vec{a}^\text{forced}_i\cdot K \vec{a}^\text{forced}_i - 2\vec{k}_i \cdot \vec{a}^\text{forced}_i
+	% 		\\
+	% 		& = \sum_i (\ab+ \vec{\delta}_i) \cdot K (\ab+ \vec{\delta}_i) - 2 \vec{k} \cdot (\ab+ \vec{\delta}_i)
+	% 		\\
+	% 		&= \sum_i \text{MSE}_i + 2 \ab \cdot K \di + \di \cdot K \di - 2 \vec{k}_i \cdot \di
+	% 		\\
+	% 		& = \sum_i \text{MSE}_i + 2  \frac{z_i - \hat{Z}_i^\text{blup}}{\vec{D} \cdot K^{-1} \vec{X}} \ab \cdot \vec{D} + \left(\frac{z_i - \hat{Z}_i^\text{blup}}{\vec{D} \cdot K^{-1} \vec{X}}\right)^2 \vec{D} \cdot K^{-1} \vec{D} - 2 \frac{z_i - \hat{Z}_i^\text{blup}}{\vec{D} \cdot K^{-1} \vec{X}} \vec{k}_i \cdot K^{-1} \vec{D}
+	% 		\\
+	% 		& = \sum_i\text{MSE}_i + 2 \mathcal{F} \left(\ab - K^{-1} \vec{k} \right) \cdot \vec{D} + \mathcal{F}^2 \vec{D} \cdot K^{-1} \vec{D}
+	% 		\\
+	% 		\mathcal{F} &= \left(\frac{z_i - \hat{Z}_i^\text{blup}}{\vec{D} \cdot K^{-1} \vec{X}}\right)
+	% 	\end{align}
+	% For any proposed $\vec{z}_i$, this is the minimal MSE that can be achieved given the basis set $\Phi$ and kernel $K$. From this it is then clear that we can then directly optimise the MSE with respect to $\vec{z}_i$, or some auxiliary parameter.
+
+	% In short, we have re-rewritten our problem \textit{back} into $\vec{z}$-space. 
+
+	% This is key for any add??//////////itional work we might wish to do where additional limitations are placed within $\vec{z}$-space. 
 \end{document}

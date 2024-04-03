@@ -12,6 +12,8 @@ namespace cyclups::kernel
 
 			Vector GetVector(double predictT, const std::vector<double> & dataT,const std::vector<double> & dataVariance);
 			Matrix GetMatrix(const std::vector<double> &dataT,const std::vector<double> & dataVariance);
+			void UpdateParameter(std::vector<double> & newParam);
+			void UpdateParameter(int index, double value);
 		private:
 			const kernelFunctionPointer function;
 			std::vector<double> Parameters;
@@ -19,7 +21,7 @@ namespace cyclups::kernel
 
 
 
-	Kernel SquaredExponential(double signalVariance, double lengthScale);
+	Kernel SquaredExponential(double lengthScale, double signalVariance);
 
-	Kernel Exponential(double signalVariance, double lengthScale);
+	Kernel Exponential(double lengthScale, double signalVariance);
 }

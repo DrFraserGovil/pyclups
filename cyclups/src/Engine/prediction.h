@@ -14,9 +14,9 @@ namespace cyclups
 
 			std::vector<double> X;
 			std::vector<double> Y;
-		private:
 			std::vector<double> Y_BLUP;
 			std::vector<double> Y_BLP;
+		private:
 	};	
 
 	double TrueError(PairedData prediction, functionPointer f);

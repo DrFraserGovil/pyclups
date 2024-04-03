@@ -40,13 +40,23 @@ cyclups::Matrix cyclups::kernel::Kernel::GetMatrix(const std::vector<double> & d
 	return out;
 }
 
-cyclups::kernel::Kernel cyclups::kernel::SquaredExponential(double signalVariance, double lengthScale)
+void cyclups::kernel::Kernel::UpdateParameter(std::vector<double> &newParam)
 {
-	std::vector<double> p = {signalVariance,lengthScale};
-	return cyclups::kernel::Kernel([](double x, double y,std::vector<double> params){return params[0] * exp(-0.5*pow((x-y)/params[1],2));},p);
+	Parameters = newParam;
 }
-cyclups::kernel::Kernel cyclups::kernel::Exponential(double signalVariance, double lengthScale)
+
+void cyclups::kernel::Kernel::UpdateParameter(int index, double value)
 {
-	std::vector<double> p = {signalVariance,lengthScale};
-	return cyclups::kernel::Kernel([](double x, double y,std::vector<double> params){return params[0] * exp(-abs((x-y)/params[1]));},p);
+	Parameters[index] = value;
+}
+
+cyclups::kernel::Kernel cyclups::kernel::SquaredExponential(double lengthScale, double signalVariance)
+{
+	std::vector<double> p = {lengthScale,signalVariance};
+	return cyclups::kernel::Kernel([](double x, double y,std::vector<double> params){return params[1] * exp(-0.5*pow((x-y)/params[0],2));},p);
+}
+cyclups::kernel::Kernel cyclups::kernel::Exponential(double lengthScale, double signalVariance)
+{
+	std::vector<double> p = {lengthScale,signalVariance};
+	return cyclups::kernel::Kernel([](double x, double y,std::vector<double> params){return params[1] * exp(-abs((x-y)/params[0]));},p);
 }

@@ -1,18 +1,10 @@
+#define GNUPLOT_NO_TIDY
 #include "JSL.h"
 #include <sstream>
 
 #include "cyclups.h"
 
-void Curve(JSL::gnuplot & gp, cyclups::PairedData curve, std::string name, double (*func)(double))
-{
-	namespace lp = JSL::LineProperties;
-	double err = cyclups::TrueError(curve,func); 
-	std::ostringstream out;
-    out.precision(3);
-	out << err;
-	std::string leg = name + " (ε = " + out.str() + ")";
-	gp.Plot(curve.X,curve.Y,lp::Legend(leg));
-}
+
 void Plot(cyclups::functionPointer trueFunc, cyclups::PairedData data, cyclups::Prediction p, double (*func)(double))
 {
 	
@@ -28,9 +20,9 @@ void Plot(cyclups::functionPointer trueFunc, cyclups::PairedData data, cyclups::
 	gp.Plot(realX,realY,lp::Legend("True Function"));
 	gp.Scatter(data.X,data.Y,lp::Legend("Sampled Data"));
 
-	Curve(gp,p.BLP(),"BLP",func);
-	Curve(gp,p.BLUP(),"BLUP",func);
-	Curve(gp,p.CLUPS(),"CLUPS",func);
+	cyclups::Curve(gp,p.BLP(),"BLP",func);
+	cyclups::Curve(gp,p.BLUP(),"BLUP",func);
+	cyclups::Curve(gp,p.CLUPS(),"CLUPS",func);
 	
 	gp.SetLegend(true);
 	gp.Show();
@@ -50,7 +42,23 @@ int main(int argc, char**argv)
 	cyclups::generator::randomiser = std::default_random_engine(Seed);
 	JSL::Argument<int> NSteps(1000,"n",argc,argv);
 
-	srand(Seed);
+
+
+	auto K = cyclups::kernel::SquaredExponential(1,0.1);
+	auto B = cyclups::basis::Hermite(3);
+	auto C = cyclups::constraint::Integrable(1);
+
+	auto E = cyclups::EIE();
+
+	// int R = 100;
+	// E.Run(testFunc,C,K,B,R,"test.tst");
+	// E.Plot("test.tst","Test 1.0");
+	// E.Recover(testFunc,C,K,B,R,4343,1397452809 );
+
+	// auto C2 = cyclups::constraint::Integrable(0.999937);
+	// E.Run(testFunc,C2,K,B,R,"test.tst");
+	// E.Plot("test.tst","Test 0.999937");
+	// srand(Seed);
 
 	//generate sample
 	double xmin = -3;
@@ -61,8 +69,7 @@ int main(int argc, char**argv)
 	//define predictor
 	auto c2 = cyclups::constraint::Integrable(1);
 	auto combined = c2;
-	auto K = cyclups::kernel::SquaredExponential(0.1,1);
-	auto B = cyclups::basis::Hermite(3);
+	
 	auto P = cyclups::Predictor(K,B,combined);
 	P.Optimiser.MaxSteps = NSteps;
 	//make predictions

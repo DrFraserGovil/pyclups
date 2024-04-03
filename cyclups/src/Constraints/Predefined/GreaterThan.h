@@ -71,7 +71,7 @@ namespace cyclups::constraint
 					double buffered = std::max(input[i] - params[i],1e-8);
 					output[i] = log(buffered);
 				}};
-				ConstraintVector c = ConstraintVector::Optimise(n,n,f,grad,inv);
+				ConstraintVector c = ConstraintVector::Optimise(n,n,SeparableTransform(f,grad,inv));
 				if (usingConst)
 				{
 					std::vector<double> v (n,constVal);

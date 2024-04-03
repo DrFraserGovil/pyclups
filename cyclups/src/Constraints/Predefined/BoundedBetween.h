@@ -88,7 +88,7 @@ namespace cyclups::constraint
 					double frac = (buffered - params[2*i])/(params[2*i+1] - buffered);
 					output[i] = log(frac);
 				}};
-				ConstraintVector c = ConstraintVector::Optimise(n,n,f,grad,inv);
+				ConstraintVector c = ConstraintVector::Optimise(n,n,SeparableTransform(f,grad,inv));
 				if (usingConst)
 				{
 					std::vector<double> v (2*n);

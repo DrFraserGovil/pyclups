@@ -17,8 +17,8 @@ namespace cyclups::constraint
 			ConstraintVector();
 			
 			//pseudo-constructors -- replacement for the pythonic subclassing shenanigans
-			static ConstraintVector Optimise(int cDimension, int wDimension,transformOperator transform, transformOperator transformDerivative, transformOperator inverse);
-			static ConstraintVector Optimise(int cDimension, int wDimension,transformOperator transform, gradientOperator transformDerivative, transformOperator inverse);
+			static ConstraintVector Optimise(int cDimension, int wDimension,SeparableTransform F);
+			static ConstraintVector Optimise(int cDimension, int wDimension,FullTransform F);
 
 			static ConstraintVector Constant(int dimension, double value);
 			static ConstraintVector Constant(int dimension, std::vector<double> value);
@@ -43,9 +43,9 @@ namespace cyclups::constraint
 			int BoundStep = 0;
 			std::vector<double> TransformParams;
 			transformOperator Transform;
-			transformOperator simpleDerivative;
-			gradientOperator derivative;
 			transformOperator Inverse;
+			InvertableDifferentiableFunction<transformOperator,transformOperator,transformOperator> SimpleFunction;
+			InvertableDifferentiableFunction<transformOperator,gradientOperator,transformOperator> FullFunction;
 			bool simpleGradient = false;
 			Vector Xi;
 			Vector Psi;
@@ -60,10 +60,13 @@ namespace cyclups::constraint
 			ConstraintVector(int dimension, std::vector<double> values); 
 
 			//optimising constructor with a linear gradient. Can only be called through the associated Optimise static function.
-			ConstraintVector(int vectorDimension, int internalDimension, transformOperator transform, transformOperator transformDerivative, transformOperator inverse);
+			ConstraintVector(int vectorDimension, int internalDimension, InvertableDifferentiableFunction<transformOperator,transformOperator,transformOperator> F);
+			
+			
+			// transformOperator transform, transformOperator transformDerivative, transformOperator inverse);
 
 			//optimising constructor with a full matrix gradient. Can only be called through the associated Optimise static function.
-			ConstraintVector(int vectorDimension, int internalDimension, transformOperator transform, gradientOperator transformDerivative, transformOperator inverse); 
+			ConstraintVector(int vectorDimension, int internalDimension, InvertableDifferentiableFunction<transformOperator,gradientOperator,transformOperator> F); 
 			
 	};
 

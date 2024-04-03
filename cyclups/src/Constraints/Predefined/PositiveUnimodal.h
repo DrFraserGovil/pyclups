@@ -134,7 +134,7 @@ namespace cyclups::constraint
 						// }
 					}output[output.size()-1] = T;
 				};
-				ConstraintVector c = ConstraintVector::Optimise(n,n+1,f,grad,inv);
+				ConstraintVector c = ConstraintVector::Optimise(n,n+1,FullTransform(f,grad,inv));
 				std::vector<double> v = t;
 				// v.resize(v.size()*2);
 				// v.push_back(t[1] )

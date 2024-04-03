@@ -8,6 +8,7 @@ void cyclups::OptimiserProperties::Clear()
 	MaxAlpha = alpha*10;
 	MinAlpha = alpha/10;
 	TriggeringStep = 0;
+	NegativeCounter = 0;
 }
 void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm)
 {

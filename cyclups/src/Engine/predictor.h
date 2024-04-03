@@ -39,6 +39,7 @@ namespace cyclups
 			Prediction Predict(cvec predictX, const PairedData & data, cvec dataErrors);
 			Prediction Predict(cvec predictX,const PairedData & data, double dataErrors);
 
+			// Prediction RegularisedPrediction(cvec predictX, const PairedData & datas)
 
 			//the Retire function kills off the Constraint object, allowing its data to be returned to its original owner, and hence used (i.e. in a new predictor). This calls the Destructor of the Constraint object without forcing the Predictor to go out of scope. 
 			void Retire();
