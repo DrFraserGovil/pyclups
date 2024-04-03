@@ -30,6 +30,11 @@ void cyclups::constraint::ConstraintSet::Add(ConstraintSet c)
 	Constraints = std::move(c.Constraints);
 }
 
+void constraint::ConstraintSet::Remove()
+{
+	Constraints.pop_back();
+}
+
 void cyclups::constraint::ConstraintSet::Transfer(ConstraintSet *c)
 {
 	c->Constraints = std::move(Constraints);

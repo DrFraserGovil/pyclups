@@ -1,5 +1,6 @@
 #include "ConstraintVector.h"
 
+
 namespace cyclups::constraint
 {
 	ConstraintVector::ConstraintVector()
@@ -67,7 +68,7 @@ namespace cyclups::constraint
 
 	void  ConstraintVector::Step(VectorSlice v, int l, const OptimiserProperties & op)
 	{
-		double c1 = 1.0/(1 - pow(op.b1,l+1));
+		double c1 = 1.0/(1.0 - pow(op.b1,l+1));
 		double c2 = 1.0/(1.0 - pow(op.b2,l+1));
 		double runSum = 0;
 		for (int i = 0; i < TransformDimension; ++i)
@@ -76,15 +77,15 @@ namespace cyclups::constraint
 			double q = v[i];
 			Optim_M[i] = op.b1 * Optim_M[i] + (1.0 - op.b1) * q;
 			Optim_V[i] = op.b2 * Optim_V[i] + (1.0 - op.b2) * q*q;
-			double denom = sqrt(Optim_V[i] + 1e-10);
-			W[i] -= op.alpha * Optim_M[i] /denom;
+			double denom = sqrt(Optim_V[i]*c2+1e-15);
+
+			W[i] -= op.alpha * Optim_M[i]*c1 /denom;
 
 			if (bounder)
 			{
 				++BoundStep;
 				if (BoundStep > 1)
 				{
-					// std::cout << W[i] << "  " << minWVal << "  " << maxWVal << std::endl;
 					W[i] = std::min(maxWVal,std::max(W[i],minWVal));
 				}
 			}

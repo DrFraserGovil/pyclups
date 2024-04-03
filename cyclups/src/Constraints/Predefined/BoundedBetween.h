@@ -84,7 +84,7 @@ namespace cyclups::constraint
 				}};
 				transformOperator inv = [](Vector & output, const Vector & input,std::vector<double> & params){for (int i =0; i < output.size(); ++i){
 
-					double buffered = std::max(params[2*i] + 1e-8,std::min(params[2*i+1] - 1e-8,input[i]));
+					double buffered = std::max(params[2*i] + 1e-5,std::min(params[2*i+1] - 1e-5,input[i]));
 					double frac = (buffered - params[2*i])/(params[2*i+1] - buffered);
 					output[i] = log(frac);
 				}};

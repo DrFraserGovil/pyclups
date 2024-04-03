@@ -94,7 +94,7 @@ namespace cyclups::constraint
 					input.maxCoeff(&max_index);
 					double T = params[(int)max_index];
 					params[params.size()-1] = T;
-					double maxVal = std::max(1e-7,input.maxCoeff());
+					double maxVal = std::max(1e-5,input.maxCoeff());
 					output[0] = log(std::max(1e-3,input[0]));
 					
 					prev = exp(output[0]);
@@ -127,7 +127,7 @@ namespace cyclups::constraint
 						double scale = log(log(params.size())+8);
 
 						output[i] = scaleHeight;
-						prev = std::max(1e-8,prev * exp(qi * exp(output[i])));
+						prev = std::min(maxVal,std::max(1e-5,prev * exp(qi * exp(output[i]))));
 						// if (prev < 1e-8)
 						// {
 						// 	output[i] = -10;

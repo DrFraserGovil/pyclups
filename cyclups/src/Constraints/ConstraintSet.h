@@ -61,7 +61,8 @@ namespace cyclups::constraint
 			//transfer (destructively) all constraints within c into the present object. Useful for concatenating several objects.
 			void Add(ConstraintSet c);
 
-			
+			//removes the final element from the constraint list
+			void Remove();
 
 			//The meat of the destructor function. Used to prematurely 'kill' the present object and return the data within it back to the original owners. 
 			void Retire();

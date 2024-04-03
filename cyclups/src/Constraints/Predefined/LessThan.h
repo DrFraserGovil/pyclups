@@ -70,7 +70,7 @@ namespace cyclups::constraint
 					output[i] = - exp(input[i]);
 				}};
 				transformOperator inv = [](Vector & output, const Vector & input,std::vector<double> & params){for (int i =0; i < output.size(); ++i){
-					double buffered = std::max(-input[i] + params[i],1e-8);
+					double buffered = std::max(-input[i] + params[i],1e-5);
 					output[i] = log(buffered);
 				}};
 				ConstraintVector c = ConstraintVector::Optimise(n,n,SeparableTransform(f,grad,inv));

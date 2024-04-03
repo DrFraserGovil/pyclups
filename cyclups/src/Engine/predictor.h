@@ -21,6 +21,8 @@ namespace cyclups
 		Vector Bp_blups;
 		Eigen::LDLT<Matrix> BBt; 
 		Matrix K;
+		Eigen::LDLT<Matrix> Binv;
+		Vector p;
 	};
 
 	
@@ -39,7 +41,8 @@ namespace cyclups
 			Prediction Predict(cvec predictX, const PairedData & data, cvec dataErrors);
 			Prediction Predict(cvec predictX,const PairedData & data, double dataErrors);
 
-			// Prediction RegularisedPrediction(cvec predictX, const PairedData & datas)
+			Prediction RegularisedPrediction(cvec predictX, const PairedData & data, double dataErrors, RegularisingFunction Regulariser);
+			Prediction RegularisedPrediction(cvec predictX, const PairedData & data, cvec dataErrors, RegularisingFunction Regulariser);
 
 			//the Retire function kills off the Constraint object, allowing its data to be returned to its original owner, and hence used (i.e. in a new predictor). This calls the Destructor of the Constraint object without forcing the Predictor to go out of scope. 
 			void Retire();
@@ -49,7 +52,8 @@ namespace cyclups
 			kernel::Kernel Kernel;
 			basis::Basis Basis;
 			constraint::ConstraintSet Constraint;
-			
+			RegularisingFunction R;
+			bool UsingRegulariser = false;
 			void Initialise(cvec PredictX, const PairedData & data, cvec dataErrors);
 			void Optimise(cvec predictX, const PairedData & data, cvec dataErrors);
 			double ComputeScore(cvec predictX);

@@ -71,25 +71,30 @@ namespace cyclups
 		std::vector<double> eVec(data.X.size(),dataErrors);
 		return Predict(predictX, data,eVec);
 	}
-	Prediction Predictor::Predict(cvec predictX,const PairedData & data, cvec dataErrors)
+	
+	
+	Prediction Predictor::Predict(cvec predictX, const PairedData &data, cvec dataErrors)
 	{
 		Initialise(predictX,data,dataErrors);
 
 		auto B = Constraint.B;
+		
 		auto pblup = Vector::Map(&Store.p_blups[0],predictX.size());
 		Store.Bp_blups = B * pblup;
 		Store.BBt = (B * B.transpose()).ldlt();
-
+		if (UsingRegulariser)
+		{
+			Store.Binv = B.ldlt();
+		}
 		if (!Constraint.IsConstant)
 		{
 			Optimise(predictX,data,dataErrors);
 		}
 
-
+		
 		auto c = Constraint.C();
 		auto BzminusC = Store.Bp_blups - c;
 		auto corrector  = B.transpose() * Store.BBt.solve(BzminusC);
-
 		std::vector<double> p_clups(predictX.size(),0);
 		for (int i = 0; i < p_clups.size(); ++i)
 		{
@@ -97,6 +102,29 @@ namespace cyclups
 		}
 		return Prediction(predictX,p_clups,Store.p_blups,Store.p_blps);
 	}
+
+	Prediction Predictor::RegularisedPrediction(cvec predictX, const PairedData &data, double dataErrors, RegularisingFunction Regulariser)
+	{
+		std::vector<double> eVec(data.X.size(),dataErrors);
+		return RegularisedPrediction(predictX,data,eVec,Regulariser);
+	}
+
+	Prediction Predictor::RegularisedPrediction(cvec predictX, const PairedData &data, cvec dataErrors, RegularisingFunction Regulariser)
+	{
+		R = Regulariser;
+		UsingRegulariser = true;
+		
+		//compute new stuff to add to predictor
+		// constraint::Constraint newCon;
+		// Constraint.Add(newCon);
+		
+
+		Prediction p = Predict(predictX,data,dataErrors);
+		// Constraint.Remove();
+		UsingRegulariser = false;
+		return p;
+	}
+
 
 
 	double Predictor::ComputeScore(cvec predictX)
@@ -106,10 +134,15 @@ namespace cyclups
 
 		
 		double score = 0;
+		
 		for (int i =0; i < predictX.size(); ++i)
 		{
 			auto ai = Store.a_blups[i] + corrector[i]/Store.Beta * Store.Delta;
 			score += Kernel(predictX[i],predictX[i]) +  ai.dot(Store.K * ai) - 2 * Store.ks[i].dot(ai);
+		}
+		if (UsingRegulariser)
+		{
+			score += R.F(Store.p);
 		}
 		return score;
 	}
@@ -119,6 +152,11 @@ namespace cyclups
 		Constraint.SetPosition(Store.Bp_blups);
 		Optimiser.Clear();
 
+		
+		if (UsingRegulariser)
+		{
+			Store.p = Store.Binv.solve(Constraint.C());
+		}
 		double bestScore = ComputeScore(predictX);
 		Constraint.SavePosition();
 
@@ -128,21 +166,27 @@ namespace cyclups
 			while (!Optimiser.Converged)
 			{
 				Vector dLdc = Store.BBt.solve(Constraint.C() - Store.Bp_blups);
+				if (UsingRegulariser)
+				{
+					R.GradF(dLdc,Store.p);
+				}
 				Matrix dcdw = Constraint.Gradient();
 				Vector dLdw = dcdw * dLdc;
-
-
+			
 				Constraint.Step(dLdw,l,Optimiser);
-
+				if (UsingRegulariser)
+				{
+					Store.p = Store.Binv.solve(Constraint.C());
+				}
 				if (l % 1 == 0)
 				{
+
 					double mse = ComputeScore(predictX);
 					if (mse < bestScore)
 					{
 						bestScore = mse;
 						Constraint.SavePosition();
 					}
-					
 					Optimiser.CheckConvergence(l,dLdw.norm(),mse);
 				}
 				else
@@ -154,7 +198,11 @@ namespace cyclups
 				++l;
 			}
 		}
+
+
 		Constraint.RecoverPosition();
+		std::cout << ComputeScore(predictX) << std::endl;
+		
 		Optimiser.PrintReason();
 	}
 

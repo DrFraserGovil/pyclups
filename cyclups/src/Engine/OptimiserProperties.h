@@ -8,15 +8,15 @@ class OptimiserProperties
 	{
 		public:
 			bool Converged = false;
-			double alpha = 0.1;
+			double alpha = 0.6;
 			double b1 = 0.7;
 			double b2 = 0.9;
 			double ConvergenceMemory = 0.99;
 			int MaxSteps= 4000;
-			int MinSteps = 5;
+			int MinSteps = 0;
 
-			double ConvergedGradient = 1e-8;
-			double ConvergedScore = 1e-10;
+			double ConvergedGradient = 1e-3;
+			double ConvergedScore = 1e-7;
 			bool ReachedMaxSteps = false;
 			bool GradientConverged = false;
 			bool ScoreConverged = false;		

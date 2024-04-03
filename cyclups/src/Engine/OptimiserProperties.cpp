@@ -5,10 +5,14 @@ void cyclups::OptimiserProperties::Clear()
 	PrevScore = 0;
 	GradientMemory= 0;
 	ScoreMemory = 0;
-	MaxAlpha = alpha*10;
-	MinAlpha = alpha/10;
+	MaxAlpha = alpha*40;
+	MinAlpha = alpha/40;
 	TriggeringStep = 0;
 	NegativeCounter = 0;
+	ReachedMaxSteps = false;
+	GradientConverged = false;
+	ScoreConverged = false;
+	Converged = false;
 }
 void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm)
 {
@@ -20,9 +24,8 @@ void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm)
 	
 	double earlyCorrector = 1.0/(1.0 - pow(ConvergenceMemory,l+1));
 	
-	GradientMemory = earlyCorrector * (ConvergenceMemory * GradientMemory + (1.0 - ConvergenceMemory) * gradnorm);
-
-	if (GradientMemory < ConvergedGradient)
+	GradientMemory =  (ConvergenceMemory * GradientMemory + (1.0 - ConvergenceMemory) * gradnorm);
+	if (GradientMemory * earlyCorrector < ConvergedGradient)
 	{
 		triggeringGradient = gradnorm;
 		GradientConverged = true;
@@ -32,8 +35,11 @@ void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm)
 	if (Converged)
 	{
 		TriggeringStep = l;
-		alpha = MaxAlpha /10; //ensures it always goes back into the correct state
+		alpha = MaxAlpha /40; //ensures it always goes back into the correct state
 	}		
+	// if (l%10 == 0)
+	// {
+	// std::cout << l << "  " << GradientMemory*earlyCorrector << "/" << ConvergedGradient << "   " << ScoreMemory*earlyCorrector << "/" << ConvergedScore << std::endl;}
 }
 
 void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm, double score)
@@ -45,8 +51,8 @@ void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm, doub
 		double alphaCorrector = (10*alpha/MaxAlpha);
 		double earlyCorrector = 1.0/(1.0 - pow(ConvergenceMemory,l+1));
 		double scoreDelta = abs((score - PrevScore)/PrevScore);
-		ScoreMemory = earlyCorrector * alphaCorrector * (ConvergenceMemory * ScoreMemory + (1.0 - ConvergenceMemory) * scoreDelta);
-		if (ScoreMemory < ConvergedScore)
+		ScoreMemory = (ConvergenceMemory * ScoreMemory + (1.0 - ConvergenceMemory) * alphaCorrector *scoreDelta);
+		if (ScoreMemory* earlyCorrector < ConvergedScore)
 		{
 			triggeringScore = scoreDelta;
 			ScoreConverged = true;
@@ -82,7 +88,7 @@ void cyclups::OptimiserProperties::UpdateAlpha(double score)
 		if (NegativeCounter >= 10)
 		{
 			NegativeCounter = 0;
-			alpha = std::max(MinAlpha,alpha *0.8);
+			alpha = std::max(MinAlpha,alpha *0.7);
 		}
 	}
 	else
@@ -91,7 +97,7 @@ void cyclups::OptimiserProperties::UpdateAlpha(double score)
 		if (NegativeCounter == -5)
 		{
 			NegativeCounter = 0;
-			alpha = std::min(MaxAlpha,alpha * 1.02);
+			alpha = std::min(MaxAlpha,alpha * 1.03);
 		}
 	}
 };
