@@ -155,7 +155,7 @@ namespace cyclups
 			}
 		}
 		Constraint.RecoverPosition();
-		// Optimiser.PrintReason();
+		Optimiser.PrintReason();
 	}
 
 	void Predictor::Retire()

@@ -44,9 +44,9 @@ int main(int argc, char**argv)
 
 
 
-	auto K = cyclups::kernel::SquaredExponential(1,0.1);
+	auto K = cyclups::kernel::SquaredExponential(0.3,0.1);
 	auto B = cyclups::basis::Hermite(3);
-	auto C = cyclups::constraint::Integrable(1);
+	auto C = cyclups::constraint::PositiveUnimodal();
 
 	auto E = cyclups::EIE();
 
@@ -67,10 +67,10 @@ int main(int argc, char**argv)
 	auto D = cyclups::generator::NoisyXSample(res,testFunc,xmin,xmax,0.05);
 
 	//define predictor
-	auto c2 = cyclups::constraint::Integrable(1);
-	auto combined = c2;
+	// auto c2 = cyclups::constraint::Integrable(1);
+	// auto combined = c2;
 	
-	auto P = cyclups::Predictor(K,B,combined);
+	auto P = cyclups::Predictor(K,B,C);
 	P.Optimiser.MaxSteps = NSteps;
 	//make predictions
 	std::vector<double> tt = JSL::Vector::linspace(xmin,xmax,131);

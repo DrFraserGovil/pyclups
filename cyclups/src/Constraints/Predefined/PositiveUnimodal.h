@@ -31,7 +31,7 @@ namespace cyclups::constraint
 				};
 				gradientOperator grad= [](Matrix & output, const Vector & input,std::vector<double> & params){
 					int n = input.size() - 1;
-					
+					// return;
 					//compute f_i along the diagonals
 					output(0,0) = exp(input[0]);
 					double T = input[n];
@@ -95,7 +95,7 @@ namespace cyclups::constraint
 					double T = params[(int)max_index];
 					params[params.size()-1] = T;
 					double maxVal = std::max(1e-7,input.maxCoeff());
-					output[0] = log(std::max(1e-8,input[0]));
+					output[0] = log(std::max(1e-3,input[0]));
 					
 					prev = exp(output[0]);
 
