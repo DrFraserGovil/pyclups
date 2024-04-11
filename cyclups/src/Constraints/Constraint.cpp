@@ -20,8 +20,9 @@ cyclups::constraint::Constraint::Constraint(Matrix mat, ConstraintVector vec)
 {
 	Dimension = vec.Dimension;
 	IsConstant = true;
-	TransformDimension = 0;
+	TransformDimension = vec.TransformDimension;
 	vector = vec;
+	matrix = mat;
 }
 void cyclups::constraint::Constraint::CallInitialiser(const std::vector<double> &ts)
 {

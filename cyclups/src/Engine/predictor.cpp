@@ -75,23 +75,23 @@ namespace cyclups
 	
 	Prediction Predictor::Predict(cvec predictX, const PairedData &data, cvec dataErrors)
 	{
-		Initialise(predictX,data,dataErrors);
-
+		Initialise(predictX,data,dataErrors); 
 		auto B = Constraint.B;
-		
 		auto pblup = Vector::Map(&Store.p_blups[0],predictX.size());
 		Store.Bp_blups = B * pblup;
-		Store.BBt = (B * B.transpose()).ldlt();
+		Matrix Bt = B.transpose();
+		Store.BBt = (B * Bt).ldlt();
 		if (UsingRegulariser)
 		{
-			Store.Binv = B.ldlt();
+			Store.Binv = B.partialPivLu();
+			Store.B_trans_inv = Bt.partialPivLu();
 		}
+
 		if (!Constraint.IsConstant)
 		{
 			Optimise(predictX,data,dataErrors);
 		}
 
-		
 		auto c = Constraint.C();
 		auto BzminusC = Store.Bp_blups - c;
 		auto corrector  = B.transpose() * Store.BBt.solve(BzminusC);
@@ -113,14 +113,15 @@ namespace cyclups
 	{
 		R = Regulariser;
 		UsingRegulariser = true;
-		
+		Constraint.Initialise(predictX);
+		// Initialise(predictX,data,dataErrors);
 		//compute new stuff to add to predictor
 		// constraint::Constraint newCon;
 		// Constraint.Add(newCon);
-		
+		BulkUp(predictX);
 
 		Prediction p = Predict(predictX,data,dataErrors);
-		// Constraint.Remove();
+		Constraint.Remove();
 		UsingRegulariser = false;
 		return p;
 	}
@@ -152,10 +153,11 @@ namespace cyclups
 		Constraint.SetPosition(Store.Bp_blups);
 		Optimiser.Clear();
 
-		
+		Vector dLdp;
 		if (UsingRegulariser)
 		{
 			Store.p = Store.Binv.solve(Constraint.C());
+			dLdp = Vector::Zero(Store.p.size());
 		}
 		double bestScore = ComputeScore(predictX);
 		Constraint.SavePosition();
@@ -168,19 +170,19 @@ namespace cyclups
 				Vector dLdc = Store.BBt.solve(Constraint.C() - Store.Bp_blups);
 				if (UsingRegulariser)
 				{
-					R.GradF(dLdc,Store.p);
+					dLdp = Vector::Zero(dLdp.size());
+					R.GradF(dLdp,Store.p);
+					dLdc += Store.B_trans_inv.solve(dLdp);
 				}
 				Matrix dcdw = Constraint.Gradient();
 				Vector dLdw = dcdw * dLdc;
-			
 				Constraint.Step(dLdw,l,Optimiser);
 				if (UsingRegulariser)
 				{
-					Store.p = Store.Binv.solve(Constraint.C());
+					Store.p = Store.Binv.solve(Constraint.C());	
 				}
 				if (l % 1 == 0)
 				{
-
 					double mse = ComputeScore(predictX);
 					if (mse < bestScore)
 					{
@@ -199,9 +201,7 @@ namespace cyclups
 			}
 		}
 
-
 		Constraint.RecoverPosition();
-		std::cout << ComputeScore(predictX) << std::endl;
 		
 		Optimiser.PrintReason();
 	}
@@ -211,4 +211,58 @@ namespace cyclups
 		Constraint.Retire();
 	}
 
+
+	void Predictor::BulkUp(cvec predictX)
+	{
+		int n = predictX.size();
+		std::vector<bool> gamma(n,false);
+		int lastZeroIdx = n-1;
+		int remaining = n;
+		for (int i = 0; i < Constraint.B.rows(); ++i)
+		{
+			for (int j = lastZeroIdx; j >= 0; --j)
+			{
+				if (Constraint.B(i,j) != 0 && !gamma[j])
+				{
+					gamma[j] = true;
+					--remaining;
+					while (gamma[lastZeroIdx] == true)
+					{
+						--lastZeroIdx;
+					}
+					break;
+				}
+			}
+		}
+
+		transformOperator identity = [](Vector & output, const Vector & input,std::vector<double> & params){
+			for (int i =0; i < output.size(); ++i)
+			{
+				output[i] = input[i];
+			}
+		};
+
+		transformOperator idenity_grad= [](Vector & output, const Vector & input,std::vector<double> & params){for (int i =0; i < output.size(); ++i){
+					output[i] = 1;
+				}};
+
+		SeparableTransform F(identity,idenity_grad,identity);
+		auto cPrime = constraint::ConstraintVector::Optimise(remaining,remaining,F);
+		
+
+		Matrix Bprime(remaining,n);
+		int q = 0;
+		for (int i = 0; i < remaining; ++i)
+		{
+			while(gamma[q])
+			{
+				++q;
+			}
+			Bprime(i,q) = 1;
+			++q;
+		}
+		constraint::Constraint newCon = constraint::Constraint(Bprime,cPrime);
+		Constraint.Add(newCon);
+
+	}
 }

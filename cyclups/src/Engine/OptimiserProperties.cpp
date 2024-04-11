@@ -5,8 +5,9 @@ void cyclups::OptimiserProperties::Clear()
 	PrevScore = 0;
 	GradientMemory= 0;
 	ScoreMemory = 0;
-	MaxAlpha = alpha*40;
-	MinAlpha = alpha/40;
+	TrueAlpha = alpha;
+	MaxAlpha = alpha*AlphaFactor;
+	MinAlpha = alpha/AlphaFactor;
 	TriggeringStep = 0;
 	NegativeCounter = 0;
 	ReachedMaxSteps = false;
@@ -35,7 +36,7 @@ void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm)
 	if (Converged)
 	{
 		TriggeringStep = l;
-		alpha = MaxAlpha /40; //ensures it always goes back into the correct state
+		alpha = TrueAlpha; //ensures it always goes back into the correct state
 	}		
 	// if (l%10 == 0)
 	// {
@@ -48,7 +49,7 @@ void cyclups::OptimiserProperties::CheckConvergence(int l, double gradnorm, doub
 	
 	if (l > 0)
 	{
-		double alphaCorrector = (10*alpha/MaxAlpha);
+		double alphaCorrector = (alpha/TrueAlpha);
 		double earlyCorrector = 1.0/(1.0 - pow(ConvergenceMemory,l+1));
 		double scoreDelta = abs((score - PrevScore)/PrevScore);
 		ScoreMemory = (ConvergenceMemory * ScoreMemory + (1.0 - ConvergenceMemory) * alphaCorrector *scoreDelta);
@@ -88,16 +89,31 @@ void cyclups::OptimiserProperties::UpdateAlpha(double score)
 		if (NegativeCounter >= 10)
 		{
 			NegativeCounter = 0;
+			alpha *= 0.7;
+			if (alpha < MinAlpha)
+			{
+				alpha = MinAlpha;
+				MinAlpha *= 0.99;
+			}
 			alpha = std::max(MinAlpha,alpha *0.7);
+			// std::cout << "step down" << alpha << std::endl;
 		}
 	}
 	else
 	{
 		NegativeCounter -=1;
-		if (NegativeCounter == -5)
+		if (NegativeCounter == -2)
 		{
 			NegativeCounter = 0;
-			alpha = std::min(MaxAlpha,alpha * 1.03);
+			alpha *= 1.07;
+			if (alpha > MaxAlpha)
+			{
+				alpha = MaxAlpha;
+				MaxAlpha *=1.01;
+			}
+			// alpha = std::min(MaxAlpha,alpha * 1.03);
+			// std::cout << "step up " << alpha << std::endl;
 		}
 	}
+
 };

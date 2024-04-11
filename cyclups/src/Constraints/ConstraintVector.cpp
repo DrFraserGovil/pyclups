@@ -35,6 +35,7 @@ namespace cyclups::constraint
 			Transform(Psi,W,TransformParams);
 			value = Xi + Psi;	
 		}
+		
 		return value;
 	}
 

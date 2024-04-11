@@ -21,8 +21,10 @@ namespace cyclups
 		Vector Bp_blups;
 		Eigen::LDLT<Matrix> BBt; 
 		Matrix K;
-		Eigen::LDLT<Matrix> Binv;
+		Eigen::PartialPivLU<Matrix> Binv;
+		Eigen::PartialPivLU<Matrix> B_trans_inv;
 		Vector p;
+		
 	};
 
 	
@@ -57,5 +59,6 @@ namespace cyclups
 			void Initialise(cvec PredictX, const PairedData & data, cvec dataErrors);
 			void Optimise(cvec predictX, const PairedData & data, cvec dataErrors);
 			double ComputeScore(cvec predictX);
+			void BulkUp(cvec predictX);
 	};
 }

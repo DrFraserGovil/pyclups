@@ -22,12 +22,12 @@ bool firstPlot = true;
 void Plot(JSL::gnuplot & gp, cyclups::Prediction p, double (*func)(double),std::string name)
 {
 	namespace lp = JSL::LineProperties; 
-	if (firstPlot)
-	{
-		cyclups::Curve(gp,p.BLP(),"BLP",func);
-		cyclups::Curve(gp,p.BLUP(),"BLUP",func);
-		firstPlot = false;
-	}
+	// if (firstPlot)
+	// {
+	// 	cyclups::Curve(gp,p.BLP(),"BLP",func);
+	// 	cyclups::Curve(gp,p.BLUP(),"BLUP",func);
+	// 	firstPlot = false;
+	// }
 	cyclups::Curve(gp,p.CLUPS(),name,func);
 	// gp.SetYLog(true);
 }
@@ -36,12 +36,22 @@ void Plot(JSL::gnuplot & gp, cyclups::Prediction p, double (*func)(double),std::
 double testFunc(double x)
 {
 	// x = x +0.6;
-	// return 1.0/(1 + exp(-x));
-	return 1.0/sqrt(2*M_PI) * exp( - x*x/2);
+	return 1.0/(1 + exp(x));
+	// return 1.0/sqrt(2*M_PI) * exp( - x*x/2);
 }
 
 double omega = 10;
 double R(const cyclups::Vector & in)
+{
+	double s = 0;
+	for (int i = 1; i < in.size(); ++i)
+	{
+		double v = in[i] - in[i-1];
+		s += v*v;
+	}
+	return omega*s;
+}
+double R_grad(const cyclups::Vector & in)
 {
 	double s = 0;
 	for (int i = 1; i < in.size(); ++i)
@@ -65,6 +75,13 @@ void gradR(cyclups::Vector & out, const cyclups::Vector & in)
 			out[i] += 2*omega*(in[i] - in[i+1]);
 		}
 	}
+	
+
+}
+
+bool excluder(double x)
+{
+	return x < 0;
 }
 
 int main(int argc, char**argv)
@@ -75,57 +92,32 @@ int main(int argc, char**argv)
 
 
 
-
-	auto K = cyclups::kernel::SquaredExponential(0.5,0.1);
+	//initialise
+	auto K = cyclups::kernel::SquaredExponential(1,0.1);
 	auto B = cyclups::basis::Hermite(2);
-	auto C = cyclups::constraint::Positive();
-
-	// auto E = cyclups::EIE();
-
-	// int R = 100;
-	// E.Run(testFunc,C,K,B,R,"test.tst");
-	// E.Plot("test.tst","Test 1.0");
-	// E.Recover(testFunc,C,K,B,R,4343,1397452809 );
-
-	// auto C2 = cyclups::constraint::Integrable(0.999937);
-	// E.Run(testFunc,C2,K,B,R,"test.tst");
-	// E.Plot("test.tst","Test 0.999937");
-	// srand(Seed);
+	auto C = cyclups::constraint::Monotonic(cyclups::constraint::direction::Negative);
 
 	//generate sample
-	double xmin = -4;
-	double xmax = 4;
-	int res = 21;
+	double xmin = -10;
+	double xmax = 10;
+	int res = 15;
 	double dataError = 0.04;
-	auto D = cyclups::generator::NoisyXSample(res,testFunc,xmin,xmax,dataError);
+	auto D = cyclups::generator::UniformXSample(res,testFunc,xmin,xmax,dataError);
 
-	//define predictor
-	// auto c2 = cyclups::constraint::Integrable(1);
-	// auto combined = c2;
-	
-
+	//set up predictor
 	auto P = cyclups::Predictor(K,B,C);
 	P.Optimiser.MaxSteps = NSteps;
+	
 	//make predictions
-	std::vector<double> tt = JSL::Vector::linspace(xmin,xmax,331);
-	// auto p = P.Predict(tt,D,0.1);
+	std::vector<double> tt = JSL::Vector::linspace(xmin,xmax,111);
+	auto p = P.Predict(tt,D,dataError);
+	omega = 9;
+	auto pp = P.RegularisedPrediction(tt,D,dataError,cyclups::RegularisingFunction(R,gradR));
 
+	//plot
 	JSL::gnuplot gp;
 	PlotBackground(gp,D,testFunc);
-	auto p = P.Predict(tt,D,dataError);
 	Plot(gp,p,testFunc,"CLUPS");
-	
-	// P.Retire();
-	std::vector<int> oms = {10,50,100};
-	for (auto i : oms)
-	{
-		omega = i;
-		// auto P2 = cyclups::Predictor(K,B,C);
-		// P2.Optimiser.MaxSteps = NSteps;
-		auto pp = P.RegularisedPrediction(tt,D,dataError,cyclups::RegularisingFunction(R,gradR));
-
-	
-		Plot(gp,pp,testFunc,"rCLUPS_{" + std::to_string(omega) + "}");
-	}
+	Plot(gp,pp,testFunc,"rCLUPS");
 	gp.Show();
 }
