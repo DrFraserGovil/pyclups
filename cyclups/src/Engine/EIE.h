@@ -7,7 +7,6 @@
 namespace cyclups
 {
 	void Curve(JSL::gnuplot & gp, cyclups::PairedData curve, std::string name, double (*func)(double));
-
 	class EIE
 	{
 		public:

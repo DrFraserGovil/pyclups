@@ -244,5 +244,5 @@ void cyclups::Curve(JSL::gnuplot &gp, cyclups::PairedData curve, std::string nam
     out.precision(3);
 	out << err;
 	std::string leg = name + " (ε = " + out.str() + ")";
-	gp.Plot(curve.X,curve.Y,lp::Legend(leg));
+	gp.Plot(curve.X,curve.Y,lp::Legend(leg),lp::PenSize(2));
 }

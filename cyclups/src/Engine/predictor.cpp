@@ -170,7 +170,6 @@ namespace cyclups
 				Vector dLdc = Store.BBt.solve(Constraint.C() - Store.Bp_blups);
 				if (UsingRegulariser)
 				{
-					dLdp = Vector::Zero(dLdp.size());
 					R.GradF(dLdp,Store.p);
 					dLdc += Store.B_trans_inv.solve(dLdp);
 				}
@@ -201,7 +200,7 @@ namespace cyclups
 			}
 		}
 
-		Constraint.RecoverPosition();
+		// Constraint.RecoverPosition();
 		
 		Optimiser.PrintReason();
 	}
