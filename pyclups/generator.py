@@ -1,5 +1,12 @@
 import numpy as np
 
+
+class Data:
+	def __init__(self,x,y,errors=1e-20):
+		self.T = x
+		self.X = y
+		self.Errors = x*0 + errors #ensures it has the same type as x, even if errors is just a double....
+
 def GenerateData(**kwargs):
 	#synthesises a sample from Func()
 
@@ -10,6 +17,7 @@ def GenerateData(**kwargs):
 	xmax = 10
 	dataNoise = 0.2
 	mode = "uniform"
+	heteroskedacity = 0
 	for key,value in kwargs.items():
 			if key == "n":
 				N = value
@@ -23,6 +31,8 @@ def GenerateData(**kwargs):
 				dataNoise = value
 			elif key == "mode":
 				mode = value
+			elif key == "skedacity":
+				heteroskedacity = value
 			else:
 				raise KeyError("Unknown key (" + str(key) + ") passed to kernel")
 
@@ -36,5 +46,17 @@ def GenerateData(**kwargs):
 	else:
 		raise KeyError("Unknown mode (" + mode +") passed to data generator")
 	t = np.sort(t)
-	x = func(t) + np.random.normal(0,dataNoise,N,)
-	return [t,x]
+	
+	# minError = dataNoise * (1.0 - heteroskedacity)
+	# maxError = dataNoise * (1.0 + heteroskedacity)
+	# errorSizes = np.maximum(dataNoise/100,np.random.uniform(minError,maxError,N,))
+	if heteroskedacity > 0:
+		errorSizes = np.random.lognormal(np.log(dataNoise),heteroskedacity,N,)
+		errorSizes = dataNoise / np.mean(errorSizes) * errorSizes
+		print(np.mean(errorSizes))
+	else:
+		errorSizes = x*0 + dataNoise
+	errors = np.random.normal(0,1,N,) * errorSizes
+	x = func(t) + errors
+	
+	return Data(t,x,errorSizes)

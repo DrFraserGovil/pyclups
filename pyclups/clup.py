@@ -1,8 +1,9 @@
 import pyclups
 import numpy as np
-import emcee
 import random
 from matplotlib import pyplot as pt
+
+
 class Predictor:
 	trueFunc = None
 	
@@ -12,17 +13,18 @@ class Predictor:
 		self.Basis = basis
 		self.Verbose = verbose
 
-	def Predict(self,predictPoints,dataT,dataX,errorX=1e-20):
+
+	def Predict(self,predictPoints,data):
 		self.Constraints.Validate(predictPoints)
 
-		self._InitialiseComponents(predictPoints,dataT,dataX,errorX)
+		self._InitialiseComponents(predictPoints,data)
 		if self.Constraints.IsConstant:
 			if np.shape(self.PseudoInv)!=(0,0):
 
 				corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)				
 				for i in range(len(predictPoints)):
 					ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
-					self.p_clups[i] = ai.T@dataX
+					self.p_clups[i] = ai.T@data.X
 			else:
 				self.p_clups = self.p_blups
 
@@ -31,32 +33,32 @@ class Predictor:
 			corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)				
 			for i in range(len(predictPoints)):
 				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
-				self.p_clups[i] = ai.T@dataX
+				self.p_clups[i] = ai.T@data.X
 		return pyclups.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
 
-	def _InitialiseComponents(self,predictPoints,dataT,dataX,errorX):
-		eX = np.array(errorX)
+	def _InitialiseComponents(self,predictPoints,data):
+		eX = np.array(data.Errors)
 		if len(np.atleast_1d(eX)) == 1:
-			dataVariance = np.ones(len(dataX)) * errorX**2
+			dataVariance = np.ones(len(data.X)) * data.Errors**2
 		else:
-			if len(eX) != len(dataX):
-				raise ValueError(f"Data length {len(dataX)} and error length {len(eX)} are not concordant")
+			if len(eX) != len(data.X):
+				raise ValueError(f"Data length {len(data.X)} and error length {len(data.Errors)} are not concordant")
 			dataVariance= eX**2
 
 	
-		dx = np.array(dataX).reshape(-1,1)
-		self.Phi = np.zeros((self.Basis.maxOrder+1,len(dataT)))
-		for i in range(len(dataT)):
+		dx = np.array(data.X).reshape(-1,1)
+		self.Phi = np.zeros((self.Basis.maxOrder+1,len(data.T)))
+		for i in range(len(data.T)):
 			for m in range(self.Basis.maxOrder+1):
-				self.Phi[m,i] = self.Basis(m,dataT[i])
+				self.Phi[m,i] = self.Basis(m,data.T[i])
 
 		##scope for some fancy cholesky stuff here -- will do boring way first to get it working
-		self.K = self.Kernel.Matrix(dataT,dataVariance)
+		self.K = self.Kernel.Matrix(data.T,dataVariance)
 		self.Kinv = np.linalg.inv(self.K)
 		Minv = np.linalg.inv(self.Phi@self.Kinv@self.Phi.T)
 
 		C = self.Kinv@self.Phi.T@Minv
-		Delta = (np.eye(len(dataT)) - C@self.Phi).T
+		Delta = (np.eye(len(data.T)) - C@self.Phi).T
 
 		self.ks = [np.zeros((0))]*len(predictPoints)
 		self.gammas = [np.zeros((0))]*len(predictPoints)
@@ -77,7 +79,7 @@ class Predictor:
 		self.PseudoInv = D.T @ self.DDtInv
 		
 		for i in range(len(predictPoints)):
-			self.ks[i] = self.Kernel.Vector(dataT,predictPoints[i])
+			self.ks[i] = self.Kernel.Vector(data.T,predictPoints[i])
 
 			self.a_blps[i] = self.Kinv@self.ks[i]
 			phi = np.array([self.Basis(j,predictPoints[i]) for j in range(self.Basis.maxOrder+1)]).reshape(-1,1)
