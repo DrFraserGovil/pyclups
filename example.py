@@ -1,9 +1,12 @@
 #!/opt/homebrew/bin/python3
+
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = "1"
 import numpy as np
-from matplotlib import pyplot as pt
 from tqdm import tqdm
 import warnings
 from scipy import special
+from matplotlib import pyplot as pt
 import pyclups
 
 
@@ -35,21 +38,23 @@ constraint = pyclups.constraint.Monotonic()
 
 
 #make predictions
-tt = np.linspace(bottom,top,111)
+tt = np.linspace(bottom,top,201)
 s = pyclups.Predictor(K,constraint,basis)
-pred = s.Predict(tt,data)
+
+for i in range(0,1):
+	pred = s.Predict(tt,data)
 
 
 
-#plot results
-pt.errorbar(data.T,data.X,data.Errors,capsize=2,fmt='o',label="Sampled Data",zorder=1)
-pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
+# #plot results
+# pt.errorbar(data.T,data.X,data.Errors,capsize=2,fmt='o',label="Sampled Data",zorder=1)
+# pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
 
-plotter(pred,"CLUPS",f,True)
-pt.legend()
-pt.ylabel("$z(t)$")
-pt.xlabel("$t$")
-pt.draw()
-pt.pause(0.01)
+# plotter(pred,"CLUPS",f,True)
+# pt.legend()
+# pt.ylabel("$z(t)$")
+# pt.xlabel("$t$")
+# pt.draw()
+# pt.pause(0.01)
 
-input("Enter to exit")
+# input("Enter to exit")

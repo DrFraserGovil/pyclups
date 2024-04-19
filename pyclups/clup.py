@@ -2,7 +2,7 @@ import pyclups
 import numpy as np
 import random
 from matplotlib import pyplot as pt
-
+import scipy
 
 class Predictor:
 	trueFunc = None
@@ -23,7 +23,7 @@ class Predictor:
 
 				corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)				
 				for i in range(len(predictPoints)):
-					ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
+					ai = self.a_blups[i] + corrector[i]* self.epsilon
 					self.p_clups[i] = ai.T@data.X
 			else:
 				self.p_clups = self.p_blups
@@ -32,7 +32,7 @@ class Predictor:
 			self._Optimise(predictPoints)
 			corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)				
 			for i in range(len(predictPoints)):
-				ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
+				ai = self.a_blups[i] + corrector[i] * self.epsilon
 				self.p_clups[i] = ai.T@data.X
 		return pyclups.Prediction(predictPoints,self.p_clups,0,self.p_blups,self.p_blps)
 
@@ -53,45 +53,42 @@ class Predictor:
 				self.Phi[m,i] = self.Basis(m,data.T[i])
 
 		##scope for some fancy cholesky stuff here -- will do boring way first to get it working
+		
 		self.K = self.Kernel.Matrix(data.T,dataVariance)
 		self.Kinv = np.linalg.inv(self.K)
+		
 		Minv = np.linalg.inv(self.Phi@self.Kinv@self.Phi.T)
 
 		C = self.Kinv@self.Phi.T@Minv
 		Delta = (np.eye(len(data.T)) - C@self.Phi).T
 
 		self.ks = [np.zeros((0))]*len(predictPoints)
-		self.gammas = [np.zeros((0))]*len(predictPoints)
-		self.a_blps = [np.zeros((0))]*len(predictPoints)
 		self.a_blups = [np.zeros((0))]*len(predictPoints)
 		self.p_blps = np.zeros((len(predictPoints),1))
 		self.p_blups = np.zeros((len(predictPoints),1))
 		self.p_clups = np.zeros((len(predictPoints),1))
-		self.blups_error =np.zeros((len(predictPoints),1))
-		self.delta = self.Kinv@Delta@dx
-		self.beta = dx.T@self.delta
+		
+		delta = self.Kinv@Delta@dx
+		beta = dx.T@delta
 
-		self.epsilon = 1.0/self.beta * self.delta
+		self.epsilon = 1.0/beta * delta
 
 		D = self.Constraints.Matrix()
 
 		self.DDtInv = np.linalg.inv(D@D.T)
+
 		self.PseudoInv = D.T @ self.DDtInv
 		
 		for i in range(len(predictPoints)):
 			self.ks[i] = self.Kernel.Vector(data.T,predictPoints[i])
-
-			self.a_blps[i] = self.Kinv@self.ks[i]
+			a_blps = self.Kinv@self.ks[i]
 			phi = np.array([self.Basis(j,predictPoints[i]) for j in range(self.Basis.maxOrder+1)]).reshape(-1,1)
-			
-			ai = Delta.T@self.a_blps[i] + C@phi
-			self.a_blups[i] = ai
 
-			self.p_blps[i] = dx.T@self.a_blps[i]
+			self.p_blps[i] = dx.T@a_blps
+			self.a_blups[i] =  Delta.T@a_blps + C@phi
 			self.p_blups[i] = dx.T@self.a_blups[i]
 
-		self._X_data = dx
-		self.Dpblub = self.Constraints.Matrix() @ self.p_blups
+		self.Bp_blub = self.Constraints.Matrix() @ self.p_blups
 				
 	def _Optimise(self, predictPoints):
 
@@ -111,7 +108,6 @@ class Predictor:
 		delta = 0
 		minScore = self._ComputeScore(predictPoints)
 		minC = np.array(self.Constraints._OptimiseVector[:])
-		minl = -1
 		currentAlpha = alpha
 		alphaTrigger = 0
 		
@@ -119,7 +115,7 @@ class Predictor:
 		for l in range(steps):
 
 			#compute gradient
-			diff = self.DDtInv@(self.Constraints.Vector() - self.Dpblub)
+			diff = self.DDtInv@(self.Constraints.Vector() - self.Bp_blub)
 			dcdz = self.Constraints.Derivative()
 			grad = 2*dcdz@diff
 
@@ -175,7 +171,7 @@ class Predictor:
 		corrector = self.PseudoInv@(self.Constraints.Vector() - self.Constraints.Matrix()@self.p_blups)	
 		mse = 0			
 		for i in range(len(predictPoints)):
-			ai = self.a_blups[i] + corrector[i]/self.beta * self.delta
+			ai = self.a_blups[i] + corrector[i] * self.epsilon
 			mse +=  ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
 		return mse
 
