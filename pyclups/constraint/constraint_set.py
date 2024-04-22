@@ -106,7 +106,7 @@ class ConstraintSet:
 		return self._TotalDerivative
 	
 	def Update(self,step):
-		self._OptimiseVector += step	
+		self._OptimiseVector += step.reshape(self._OptimiseVector.shape)	
 	
 	def Validate(self,predictT):
 		self.TransformDimension = 0
@@ -130,3 +130,37 @@ class ConstraintSet:
 		if abs(np.linalg.det(self._TotalMatrix@self._TotalMatrix.transpose())) < 1e-8:
 			raise ValueError(f"The transpose-product of the constraint matrix has a vanishing determinant. This is likely due to conflicting, simultaneous constraints.")
 
+	def Remove(self):
+		self.Constraints = self.Constraints[:-1]
+	def BulkUp(self,predictT):
+		gamma = np.zeros(predictT.shape)
+		B = self.Matrix()
+		brows,bcols = B.shape
+		lastZeroIdx = len(predictT)-1
+		remaining = lastZeroIdx + 1
+		for i in range(brows):
+			j = lastZeroIdx
+			while (j>=0):
+				if B[i,j] != 0 and gamma[j] == 0:
+					gamma[j] = 1
+					remaining -=1
+					while lastZeroIdx >= 0 and gamma[lastZeroIdx] == 1:
+						lastZeroIdx -=1
+					break
+				j-=1
+		# print(B)
+		# print(gamma)
+		unconstrained = np.nonzero(1-gamma)[0]
+		U = np.zeros((remaining,len(predictT)))
+		for i in range(remaining):
+			
+			U[i,unconstrained[i]] = 1
+		
+		trivial = lambda x: x
+		dtrivial = lambda x: x*0+1
+
+		bulk_vector = OptimiseVector(remaining,remaining,trivial,dtrivial,trivial)
+
+		newcon = Constraint(matrix=U,vector=bulk_vector)
+		self.Add(newcon)
+		self.Validate(predictT)

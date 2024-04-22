@@ -54,7 +54,7 @@ def GenerateData(**kwargs):
 		errorSizes = np.random.lognormal(np.log(dataNoise),heteroskedacity,N,)
 		errorSizes = dataNoise / np.mean(errorSizes) * errorSizes
 	else:
-		errorSizes = x*0 + dataNoise
+		errorSizes = t*0 + dataNoise
 	errors = np.random.normal(0,1,N,) * errorSizes
 	x = func(t) + errors
 	
