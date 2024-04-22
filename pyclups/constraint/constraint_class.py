@@ -93,7 +93,6 @@ class Constraint:
 	
 	def Derivative(self):
 		#computes the matrix derivative dc/dw. We make the simplifying constraint that (by construction) subconstraints must be linearly independent, and so \vec{w} can be fully separated by subconstraint. 
-
 		self._TotalDerivative = np.zeros((self.TransformDimension,self.Dimension))
 		tstart = 0
 		dstart = 0

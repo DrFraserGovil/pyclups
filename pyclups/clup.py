@@ -12,7 +12,13 @@ class Predictor:
 		self.Constraints = constraint
 		self.Basis = basis
 		self.Verbose = verbose
-
+		self.alpha = 0.1
+		self.optimiser_b1 = 0.7
+		self.optimiser_b2 = 0.9
+		self.MaxSteps = 500
+		self.GradientCriteria = 1e-5
+		self.ScoreCriteria =1e-6
+		self.AlphaFactor = 10
 
 	def Predict(self,predictPoints,data):
 		self.Constraints.Validate(predictPoints)
@@ -89,80 +95,106 @@ class Predictor:
 			self.p_blups[i] = dx.T@self.a_blups[i]
 
 		self.Bp_blub = self.Constraints.Matrix() @ self.p_blups
-				
+
+
+	def _Step(self,l,alpha,grad):
+		#compute adam step rules
+		self.ms = self.optimiser_b1 * self.ms + (1.0 - self.optimiser_b1) * grad
+		self.vs = self.optimiser_b2 * self.vs + (1.0 - self.optimiser_b2)*np.multiply(grad,grad)
+		c1 = 1.0/(1.0 - pow(self.optimiser_b1,l+1))
+		c2 = 1.0/(1.0 - pow(self.optimiser_b2,l+1))
+		step = -alpha*np.divide(self.ms/c1, np.sqrt(self.vs/c2 + 1e-20))
+		self.Constraints.Update(step)
+
+	def _CheckConvergence(self,l,mse,grad,currentAlpha):
+		converged=False
+		convMem = 0.9
+		earlyCorrector = 1.0/(1.0 - pow(convMem,l+1))
+		
+		gNorm = np.linalg.norm(grad/len(self.ms))
+		self.gradMem = convMem * self.gradMem + (1.0 - convMem) * gNorm
+
+		if self.gradMem * earlyCorrector < self.GradientCriteria:
+			if self.Verbose:
+				print(f"Convergence Criteria met: Gradient flat ({self.gradMem:.4})")
+			converged = True
+		alphaCorrector = currentAlpha/self.alpha
+		self.scoreMem = convMem * self.scoreMem + (1.0 - convMem) * mse
+		scoreDelta = abs((mse - self.scoreMem)/self.scoreMem)
+		self.deltaScore = convMem * self.deltaScore + (1.0 - convMem) * scoreDelta
+		if self.deltaScore * earlyCorrector < self.ScoreCriteria:
+			if self.Verbose:
+				print(f"Convergence Criteria met: Function value stable at, {mse:.6} with mean change {100*self.deltaScore:.4}\%",l,alphaCorrector)
+			converged = True
+
+		if (l >= self.MaxSteps):
+			if self.Verbose:
+				print(f"Convergence Criteria met: Took {l} steps")
+			converged = True
+
+		## some extensions to the ADAM optimiser to make it take smaller steps when large oscillations
+		if l > 5:
+			if mse > self.prevScore:
+				self.AlphaTrigger += 2
+				if self.AlphaTrigger > 10:
+					currentAlpha *= 0.1
+					self.AlphaTrigger = 0
+					if currentAlpha < self.MinAlpha:
+						currentAlpha = self.MinAlpha
+						self.MinAlpha = self.MinAlpha * 0.99
+			else:
+				min = -2
+				self.AlphaTrigger = self.AlphaTrigger-1
+				if self.AlphaTrigger < min:
+					self.AlphaTrigger = min
+					currentAlpha = currentAlpha * 1.5
+					if currentAlpha > self.MaxAlpha:
+						currentAlpha = self.MaxAlpha
+						self.MaxAlpha = self.MaxAlpha *1.01
+		return converged,currentAlpha
 	def _Optimise(self, predictPoints):
 
 
 		#find a good initial position
 		self.Constraints.InitialPosition(self.p_blups)
+		
 		#initialise optimiser parameters
-		ms = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
-		vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
-		b1 = 0.7
-		b2 = 0.95
-		steps = 500
-		alpha = 0.1
+		self.ms = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
+		self.vs = np.zeros(shape=np.shape(self.Constraints.TransformDimension,))
 
 		#values for keeping track of convergence
-		oldScore = 0
-		delta = 0
+		self.gradMem = 0
+		self.scoreMem = 0
+		self.prevScore= 0
+		self.deltaScore = 0
 		minScore = self._ComputeScore(predictPoints)
+		mse = minScore
 		minC = np.array(self.Constraints._OptimiseVector[:])
-		currentAlpha = alpha
-		alphaTrigger = 0
 		
-		
-		for l in range(steps):
-
+		#begin the optimisation loop
+		converged = False
+		currentAlpha = self.alpha
+		self.MinAlpha = currentAlpha/self.AlphaFactor
+		self.MaxAlpha = currentAlpha*self.AlphaFactor
+		self.AlphaTrigger = 0
+		l = 0
+		while not converged:
 			#compute gradient
-			diff = self.DDtInv@(self.Constraints.Vector() - self.Bp_blub)
-			dcdz = self.Constraints.Derivative()
-			grad = 2*dcdz@diff
+			# diff = self.DDtInv@(self.Constraints.Vector() - self.Bp_blub)
+			# dcdz = self.Constraints.Derivative()
+			grad = 2*self.Constraints.Derivative()@ (self.DDtInv@(self.Constraints.Vector() - self.Bp_blub))
+			self._Step(l,currentAlpha,grad)
 
-			#compute adam step rules
-			ms = b1 * ms + (1.0 - b1) * grad
-			vs = b2 * vs + (1.0 - b2)*np.multiply(grad,grad)
-			c1 = 1.0/(1.0 - pow(b1,l+1))
-			c2 = 1.0/(1.0 - pow(b2,l+1))
-			step = -currentAlpha*np.divide(ms/c1, np.sqrt(vs/c2 + 1e-20))
-			self.Constraints.Update(step)
-			
 			#compute new score
+			self.prevScore = mse
 			mse = self._ComputeScore(predictPoints)
-			if minScore == None or mse < minScore:
+			if mse < minScore:
 				minScore = mse
 				minC = np.array(self.Constraints._OptimiseVector)
-				minl = l+1
 
-			##convergence checks
-			gNorm = np.linalg.norm(grad/len(ms))
-			q= abs(mse - oldScore)/(abs(mse)+1e-7)
-			dmem = 0.9
-			delta = dmem*delta + (1.0- dmem)*q
-			oldScore = mse
-			#exit if gradient is very flat
-			if gNorm < 1e-7:
-				mse = self._ComputeScore(predictPoints)
-				if self.Verbose:
-					print(f"Convergence Criteria met: Gradient flat ({gNorm})")
-				break
-						
-			if (delta < 1e-10 and l > 120):
-				if self.Verbose:
-					print(f"Convergence Criteria met: Function value stable at, {mse} with mean change {delta}")
-				break
-
-			## some extensions to the ADAM optimiser to make it take smaller steps when large oscillations
-			if l > 5:
-				if mse > oldScore:
-					alphaTrigger += 2
-					if alphaTrigger > 50:
-						currentAlpha *= 0.9
-						alphaTrigger = 0
-				else:
-					alphaTrigger = max(0,alphaTrigger-1)
-					if alphaTrigger == 0:
-						currentAlpha = min(alpha,currentAlpha*1.01)
+			l+=1
+			converged,currentAlpha = self._CheckConvergence(l,mse,grad,currentAlpha)
+			# print(l,currentAlpha)
 		
 		#set the parameter values to those which achieved the lowest score (in case of large oscillations)
 		self.Constraints._OptimiseVector[:] = minC
@@ -173,85 +205,6 @@ class Predictor:
 		for i in range(len(predictPoints)):
 			ai = self.a_blups[i] + corrector[i] * self.epsilon
 			mse +=  ai.T @ self.K @ ai - 2 * self.ks[i].T @ai
-		return mse
-
-###########################################
-	#All functions below are part of the (experimental) error analysis code. They are not yet active.
-##########################################
-
-	# def ConstraintProject(self,vector):
-	# 	Bp = self.Constraints.Matrix() @ vector
-	# 	testPhi = Bp - self.Constraints._TotalBaseVector
-
-	# 	phi = np.zeros((len(Bp),1))
-	# 	start = 0
-	# 	penaliser = 0
-	# 	for i in range(len(self.Constraints._internalConstraints)):
-	# 		dim = self.Constraints._internalConstraints[i].Dimension
-	# 		if not self.Constraints._internalConstraints[i].IsConstant:
-	# 			for j in range(dim):
-	# 				if testPhi[start+j] > 0:
-	# 					phi[start+j] = testPhi[start+j]
-	# 				else:
-	# 					penaliser += abs(testPhi[start+j])
-						
-					
-	# 		start += dim
-
-	# 	bracket = phi - testPhi
-	# 	correct = vector + self.PseudoInv @(bracket)
-	# 	return correct,penaliser*1000
-
-	# def _ErrorScore(self,vector):
-	# 	sigma = 0.05
-	# 	ps,penalty = self.ConstraintProject(vector.reshape((len(vector),1)))
-		
-	# 	score = -self.MSE_Offset
-	# 	for i in range(len(vector)):
-	# 		ai = self.a_blups[i] + (ps[i] - self.p_blups[i])/self.beta * self.delta
-	# 		score -= ai.T @self.K @ai - 2*self.ks[i].T @ai
-	# 	score -= penalty
-	# 	return score
-	# def _Errors(self):
-		vector = self.p_clups
-		
-		self.MyVec = vector.reshape((len(vector),1))
-		
-
-		ndim = len(vector)
-		nwalkers= int(2.1*ndim)
-
-		startPos = np.tile(vector.T,(nwalkers,1))
-		noise = 0.2 * (np.random.random((nwalkers,ndim))-0.5)
-		startPos += noise
-		for i in range(nwalkers):
-			v = startPos[i,:].reshape((ndim,1))
-			# print(v)
-			t,_ = self.ConstraintProject(v)
-			startPos[i,:] = t.T
-		sampler = emcee.EnsembleSampler(nwalkers,ndim,lambda ps: self._ErrorScore(ps),moves=[
-        (emcee.moves.DEMove(), 0.8),
-        (emcee.moves.DESnookerMove(), 0.2),
-    	],
-		)
-		state = sampler.run_mcmc(startPos,5000,progress=True)
-		# tau = int(np.mean(np.mean(sampler.get_autocorr_time())))
-		try:
-			tau = int(np.mean(np.mean(sampler.get_autocorr_time())))
-		except:
-			tau = 100
-		flat_samples = sampler.get_chain(discard=10*tau, thin=2*tau, flat=True)
-		random.shuffle(flat_samples)
-		print(
-			"Mean acceptance fraction: {0:.3f}".format(
-				np.mean(sampler.acceptance_fraction)
-			)
-		)
-		print("I have",len(flat_samples),"given",tau)
-
-		# flat_samples = flat_samples[:3]
-		out = []
-		for j in range(len(flat_samples)):
-			ps,pen = self.ConstraintProject(flat_samples[j].reshape((ndim,1)))
-			out.append(ps)
-		return out
+		s= mse[0,0].astype(float)
+		# print(s)
+		return s

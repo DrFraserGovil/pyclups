@@ -38,23 +38,23 @@ constraint = pyclups.constraint.Monotonic()
 
 
 #make predictions
-tt = np.linspace(bottom,top,201)
+tt = np.linspace(bottom,top,1001)
 s = pyclups.Predictor(K,constraint,basis)
+s.Verbose = True
 
-for i in range(0,1):
+
+#plot results
+pt.errorbar(data.T,data.X,data.Errors,capsize=2,fmt='o',label="Sampled Data",zorder=1)
+pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
+
+for i in range(0,10):
 	pred = s.Predict(tt,data)
+	s.ScoreCriteria = s.ScoreCriteria * 2
+	plotter(pred,f"{i}CLUPS",f,i==0)
+pt.legend()
+pt.ylabel("$z(t)$")
+pt.xlabel("$t$")
+pt.draw()
+pt.pause(0.01)
 
-
-
-# #plot results
-# pt.errorbar(data.T,data.X,data.Errors,capsize=2,fmt='o',label="Sampled Data",zorder=1)
-# pt.plot(tt,f(tt),'k',linestyle='dotted',label="Real Function")
-
-# plotter(pred,"CLUPS",f,True)
-# pt.legend()
-# pt.ylabel("$z(t)$")
-# pt.xlabel("$t$")
-# pt.draw()
-# pt.pause(0.01)
-
-# input("Enter to exit")
+input("Enter to exit")
