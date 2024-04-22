@@ -1,7 +1,7 @@
 import numpy as np
-from pyclups.constraint.subconstraint import *
+from pyclups.constraint.constraint import *
 
-class Constraint:
+class ConstraintSet:
 	##constraint class is the user interface for constructing and applying prebuilt (and user-defined) constraints
 	##It is actually a container class for a list of subconstraint classes (stored in self.Constraints)
 	## this is so that multiple constraints can be easily concatenated without it breaking the simple transform interface
@@ -16,7 +16,7 @@ class Constraint:
 		self.IsConstant = True
 
 		## if arguments are present, we pass them along to the appropriate subconstraint constructor
-		self.Add(SubConstraint(**kwargs))
+		self.Add(Constraint(**kwargs))
 
 
 	def Add(self,constraint):
@@ -82,6 +82,8 @@ class Constraint:
 					dist = upper - lower
 					
 					self._OptimiseVector[lower:upper] = self.Constraints[i].Vector.EnforceBounds(self._OptimiseVector[lower:upper])
+
+					
 					self._TotalVector[start:start+dim] += self.Constraints[i].Transform(self._OptimiseVector[lower:upper])
 				start = start + dim
 	
@@ -91,7 +93,6 @@ class Constraint:
 	
 	def Derivative(self):
 		#computes the matrix derivative dc/dw. We make the simplifying constraint that (by construction) subconstraints must be linearly independent, and so \vec{w} can be fully separated by subconstraint. 
-
 		self._TotalDerivative = np.zeros((self.TransformDimension,self.Dimension))
 		tstart = 0
 		dstart = 0
@@ -105,7 +106,7 @@ class Constraint:
 		return self._TotalDerivative
 	
 	def Update(self,step):
-		self._OptimiseVector += step	
+		self._OptimiseVector += step.reshape(self._OptimiseVector.shape)	
 	
 	def Validate(self,predictT):
 		self.TransformDimension = 0
@@ -129,3 +130,37 @@ class Constraint:
 		if abs(np.linalg.det(self._TotalMatrix@self._TotalMatrix.transpose())) < 1e-8:
 			raise ValueError(f"The transpose-product of the constraint matrix has a vanishing determinant. This is likely due to conflicting, simultaneous constraints.")
 
+	def Remove(self):
+		self.Constraints = self.Constraints[:-1]
+	def BulkUp(self,predictT):
+		gamma = np.zeros(predictT.shape)
+		B = self.Matrix()
+		brows,bcols = B.shape
+		lastZeroIdx = len(predictT)-1
+		remaining = lastZeroIdx + 1
+		for i in range(brows):
+			j = lastZeroIdx
+			while (j>=0):
+				if B[i,j] != 0 and gamma[j] == 0:
+					gamma[j] = 1
+					remaining -=1
+					while lastZeroIdx >= 0 and gamma[lastZeroIdx] == 1:
+						lastZeroIdx -=1
+					break
+				j-=1
+		# print(B)
+		# print(gamma)
+		unconstrained = np.nonzero(1-gamma)[0]
+		U = np.zeros((remaining,len(predictT)))
+		for i in range(remaining):
+			
+			U[i,unconstrained[i]] = 1
+		
+		trivial = lambda x: x
+		dtrivial = lambda x: x*0+1
+
+		bulk_vector = OptimiseVector(remaining,remaining,trivial,dtrivial,trivial)
+
+		newcon = Constraint(matrix=U,vector=bulk_vector)
+		self.Add(newcon)
+		self.Validate(predictT)

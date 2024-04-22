@@ -3,7 +3,7 @@ from pyclups.constraint.vector import *
 
 #each subconstraint contains one matrix and one vector
 
-class SubConstraint:
+class Constraint:
 		
 
 	def __init__(self,**kwargs):
