@@ -1,7 +1,7 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
 
-class Integrable(Constraint):
+class Integrable(ConstraintSet):
 	def __init__(self,integral):
 		self.Integral = integral
 		super().__init__(initialiser=self.InitialiseConstraint)

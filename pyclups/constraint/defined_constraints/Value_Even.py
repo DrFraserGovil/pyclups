@@ -1,6 +1,6 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
-class Even(Constraint):
+class Even(ConstraintSet):
 	def __init__(self,pivot=0):
 		self.Pivot = pivot
 		super().__init__(initialiser=self.InitialiseConstraint)

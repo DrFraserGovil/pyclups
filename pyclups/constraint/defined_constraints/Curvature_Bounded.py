@@ -1,4 +1,4 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
 class BoundedCurvature(Constraint):
 	#it doesn't actually matter if valueBelow and valueAbove are switched around, the code makes sure that it works out in the end

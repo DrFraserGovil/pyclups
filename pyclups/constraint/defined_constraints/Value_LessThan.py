@@ -1,6 +1,6 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
-class LessThan(Constraint):
+class LessThan(ConstraintSet):
 
 	def __init__(self,value,domain=None):
 		self.LessThan = value

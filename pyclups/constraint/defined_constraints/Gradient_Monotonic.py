@@ -1,6 +1,6 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
-class Monotonic(Constraint):
+class Monotonic(ConstraintSet):
 	#direction = 1 is monotonic increasing , direction = -1 is monotonic decreasing 
 	def __init__(self,direction=1,domain=None):
 		self.Direction = direction

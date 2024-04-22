@@ -1,6 +1,6 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
-class BoundedGradient(Constraint):
+class BoundedGradient(ConstraintSet):
 	#it doesn't actually matter if valueBelow and valueAbove are switched around, the code makes sure that it works out in the end
 	def __init__(self,lowerBound,upperBound,domain=None):
 		self.GreaterThan = upperBound

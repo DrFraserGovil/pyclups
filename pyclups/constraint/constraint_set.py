@@ -1,7 +1,7 @@
 import numpy as np
-from pyclups.constraint.subconstraint import *
+from pyclups.constraint.constraint import *
 
-class Constraint:
+class ConstraintSet:
 	##constraint class is the user interface for constructing and applying prebuilt (and user-defined) constraints
 	##It is actually a container class for a list of subconstraint classes (stored in self.Constraints)
 	## this is so that multiple constraints can be easily concatenated without it breaking the simple transform interface
@@ -16,7 +16,7 @@ class Constraint:
 		self.IsConstant = True
 
 		## if arguments are present, we pass them along to the appropriate subconstraint constructor
-		self.Add(SubConstraint(**kwargs))
+		self.Add(Constraint(**kwargs))
 
 
 	def Add(self,constraint):

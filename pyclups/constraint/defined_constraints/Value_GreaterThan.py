@@ -1,6 +1,6 @@
-from pyclups.constraint.constraint_class import *
+from pyclups.constraint.constraint_set import *
 
-class GreaterThan(Constraint):
+class GreaterThan(ConstraintSet):
 
 	def __init__(self,value,domain=None):
 		self.GreaterThan = value
