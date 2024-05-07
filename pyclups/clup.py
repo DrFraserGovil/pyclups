@@ -240,7 +240,7 @@ class Predictor:
 			
 			if mse < minScore:
 				minScore = mse
-				print(minScore)
+				# print(minScore)
 				self.Constraints.SavePosition()
 
 				diffnorm = np.linalg.norm(diff)
