@@ -34,7 +34,7 @@ class Monotonic(ConstraintSet):
 				matrix[pIdx,myIdx] = -1*self.Direction
 				matrix[pIdx,nextIdx] = self.Direction 
 				pIdx +=1	
-		vector = OptimiseVector(constraintDim,constraintDim,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),0)
+		vector = OptimiseVector(constraintDim,constraintDim,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(np.maximum(zs,1e-3)),0)
 		vector.SetWBounds(-10,10)
 		return vector,matrix
 	

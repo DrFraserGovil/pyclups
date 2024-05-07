@@ -40,17 +40,26 @@ class Constraint:
 		self.IsConstant = self.Vector.IsConstant
 		self.Dimension = self.Vector.Dimension
 		self.TransformDimension = self.Vector.TransformDimension
+	def SavePosition(self):
+		self.Vector.SavePosition()
+	def RecoverPosition(self):
+		self.Vector.RecoverPosition()
 
-	def Transform(self,zs):
+	def Update(self,grad,Optim):
+		if self.Vector.IsConstant:
+			raise RuntimeError("Parameter update called on a constant constraint - something has gone wrong")
+		
+		self.Vector.Update(grad,Optim)
+	def Transform(self):
 		if self.Vector.IsConstant:
 			raise RuntimeError("Transform called on a constant constraint - something has gone wrong")
-		return self.Vector.Transform(zs)
+		return self.Vector.Transform()
 	
-	def Derivative(self,zs):
+	def Derivative(self):
 		if self.Vector.IsConstant:
 			raise RuntimeError("Derivative called on a constant constraint - something has gone wrong")
-		dcdz = self.Vector.Derivative(zs)
-		if np.shape(dcdz)==np.shape(zs):
+		dcdz = self.Vector.Derivative()
+		if dcdz.shape==self.Vector.ws.shape:
 			dcdz = np.diag(np.reshape(dcdz,len(dcdz),))  #detects if the transform is using a simple separable derivative, converts to diag
 		return dcdz
 

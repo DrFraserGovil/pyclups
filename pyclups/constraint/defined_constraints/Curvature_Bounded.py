@@ -1,6 +1,6 @@
 from pyclups.constraint.constraint_set import *
 
-class BoundedCurvature(Constraint):
+class BoundedCurvature(ConstraintSet):
 	#it doesn't actually matter if valueBelow and valueAbove are switched around, the code makes sure that it works out in the end
 	def __init__(self,lowerBound,upperBound,domain=None):
 		self.GreaterThan = upperBound
@@ -112,7 +112,7 @@ class MonotonicBoundedCurvature(Constraint):
 					mult = 1.0/(1.0 + exper[j])
 				out[j,i] = mult * out[j,i-1]
 				
-		return out
+		return out.T
 
 	def InitialiseConstraint(self,ts):
 		n = len(ts)

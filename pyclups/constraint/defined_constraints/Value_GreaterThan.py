@@ -1,5 +1,5 @@
 from pyclups.constraint.constraint_set import *
-
+import numpy as np
 class GreaterThan(ConstraintSet):
 
 	def __init__(self,value,domain=None):
@@ -27,9 +27,9 @@ class GreaterThan(ConstraintSet):
 			else:
 				raise(ValueError,"A domain must be specified as a callable function")
 		if callable(self.GreaterThan):
-			vector = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),self.GreaterThan(ts))
+			vector = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(np.maximum(zs,1e-3)),self.GreaterThan(ts))
 		else:
-			vector = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(zs),self.GreaterThan)
+			vector = OptimiseVector(n,n,lambda zs : np.exp(zs), lambda zs: np.exp(zs), lambda zs: np.log(np.maximum(zs,1e-3)),self.GreaterThan)
 		
 		vector.SetWBounds(-10,10) #exponentials can get a bit tricky if you are not careful -- the derivative is equal to the exponential of w, so if w is too large or too small, the optimiser can go wrong (either not moving at all, or moving so quickly as to kill the momentum vectors)
 		return vector,matrix

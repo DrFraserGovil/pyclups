@@ -2,6 +2,82 @@ import pyclups
 import numpy as np
 from matplotlib import pyplot as pt
 import scipy.linalg as lg
+
+class OptimiserProperties:
+
+	def __init__(self):
+		self.b1 = 0.7
+		self.b2 = 0.9
+		self.alpha = 0.1
+		self.MaxSteps =3000
+		self.GradientCriteria = 1e-7
+		self.ScoreCriteria =1e-7
+		self.AlphaFactor = 5
+		self.CurrentAlpha = 0.05
+		self.gradMem = 0
+		self.scoreMem = 0
+		self.prevScore= 0
+		self.deltaScore = 0
+		
+
+	def Start(self,verbose):
+		self.Converged = (self.MaxSteps == 1)
+		self.CurrentAlpha = self.alpha
+		self.MinAlpha = self.CurrentAlpha/self.AlphaFactor
+		self.MaxAlpha = self.CurrentAlpha*self.AlphaFactor
+		self.AlphaTrigger = 0
+		self.Verbose = verbose
+	def Corrections(self,l):
+		self.c1 = 1.0/(1.0 - pow(self.b1,l+1))
+		self.c2 = 1.0/(1.0 - pow(self.b2,l+1))
+
+	def _CheckConvergence(self,l,mse,grad):
+		self.Converged=False
+		convMem = 0.9
+		earlyCorrector = 1.0/(1.0 - pow(convMem,l+1))
+		
+		gNorm = np.linalg.norm(grad/len(grad))
+		self.gradMem = convMem * self.gradMem + (1.0 - convMem) * gNorm
+
+		if l > 5 and self.gradMem * earlyCorrector < self.GradientCriteria:
+			if self.Verbose:
+				print(f"Convergence Criteria met: Gradient flat ({self.gradMem:.4}) at step {l}")
+			self.Converged = True
+		alphaCorrector = self.CurrentAlpha/self.alpha
+		self.scoreMem = convMem * self.scoreMem + (1.0 - convMem) * mse
+		scoreDelta = abs((mse - self.scoreMem)/self.scoreMem)
+		self.deltaScore = convMem * self.deltaScore + (1.0 - convMem) * scoreDelta
+		if l > 5 and self.deltaScore * earlyCorrector < self.ScoreCriteria:
+			if self.Verbose:
+				print(f"Convergence Criteria met: Function value stable at, {mse:.6} with mean change {100*self.deltaScore:.4}\%",l,alphaCorrector)
+			self.Converged = True
+
+		if (l >= self.MaxSteps):
+			if self.Verbose:
+				print(f"Convergence Criteria met: Took {l} steps, reached {mse:.6}")
+			self.Converged = True
+
+		## some extensions to the ADAM optimiser to make it take smaller steps when large oscillations
+		if l > 5:
+			if mse > self.prevScore:
+				self.AlphaTrigger += 2
+				if self.AlphaTrigger > 10:
+					self.CurrentAlpha *= 0.9
+					self.AlphaTrigger = 0
+					if self.CurrentAlpha < self.MinAlpha:
+						self.CurrentAlpha = self.MinAlpha
+						self.MinAlpha = self.MinAlpha * 0.9
+			else:
+				min = -5
+				self.AlphaTrigger = self.AlphaTrigger-1
+				if self.AlphaTrigger < min:
+					self.AlphaTrigger = 0
+					self.CurrentAlpha *= 1.02
+					if self.CurrentAlpha > self.MaxAlpha:
+						self.CurrentAlpha = self.MaxAlpha
+						self.MaxAlpha = self.MaxAlpha *1.1
+		self.prevScore = mse
+		# print("ALpha check",self.CurrentAlpha,self.MinAlpha,self.MaxAlpha)
 class Predictor:
 	trueFunc = None
 	
@@ -10,16 +86,9 @@ class Predictor:
 		self.Constraints = constraint
 		self.Basis = basis
 		self.Verbose = verbose
-		self.alpha = 0.01
-		self.optimiser_b1 = 0.7
-		self.optimiser_b2 = 0.9
-		self.MaxSteps = 5000
-		self.GradientCriteria = 1e-5
-		self.ScoreCriteria =1e-6
-		self.AlphaFactor = 1
+		self.Optim = OptimiserProperties()
 
 	def Predict(self,predictPoints,data,regulariser=None):
-		
 		self.Constraints.Validate(predictPoints)
 		self.Regulariser = regulariser
 
@@ -86,7 +155,6 @@ class Predictor:
 		beta = dx.T@delta
 
 		self.epsilon = 1.0/beta * delta
-
 		D = self.Constraints.Matrix()
 		self.Prefactor = 2.0/beta
 		self.DDtInv = np.linalg.inv(D@D.T)
@@ -105,117 +173,90 @@ class Predictor:
 
 		if self.Regulariser is not None:
 			self.Binv = np.linalg.inv(D)
-	def _Step(self,l,alpha,grad):
-		#compute adam step rules
-		self.ms = self.optimiser_b1 * self.ms + (1.0 - self.optimiser_b1) * grad.reshape(self.ms.shape)
-		self.vs = self.optimiser_b2 * self.vs + (1.0 - self.optimiser_b2)*np.multiply(grad,grad).reshape(self.ms.shape)
-		c1 = 1.0/(1.0 - pow(self.optimiser_b1,l+1))
-		c2 = 1.0/(1.0 - pow(self.optimiser_b2,l+1))
-		# print("g=",grad.T)
-		# print("m=",self.ms.T)
-		step = -alpha*np.divide(self.ms/c1, np.sqrt(self.vs/c2 + 1e-20))
-		# print(alpha,np.linalg.norm(step))
-		self.Constraints.Update(step)
+	# def _Step(self,l,alpha,grad):
+	# 	#compute adam step rules
+	# 	self.ms = self.optimiser_b1 * self.ms + (1.0 - self.optimiser_b1) * grad.reshape(self.ms.shape)
+	# 	self.vs = self.optimiser_b2 * self.vs + (1.0 - self.optimiser_b2)*np.multiply(grad,grad).reshape(self.ms.shape)
+	# 	c1 = 1.0/(1.0 - pow(self.optimiser_b1,l+1))
+	# 	c2 = 1.0/(1.0 - pow(self.optimiser_b2,l+1))
+	# 	# print("g=",grad.T)
+	# 	# print("m=",self.ms.T)
+	# 	step = -alpha*grad #np.divide(self.ms/c1, np.sqrt(self.vs/c2 + 1e-20))
+	# 	print(self.ms[:5].T)
+	# 	print(self.vs[:5].T)
+	# 	print(-alpha *self.ms[1]/c1 / np.sqrt(self.vs[1]/c2))
+	# 	print("STEP",step[:5].T)
+	# 	# print(alpha,np.linalg.norm(step))
+	# 	self.Constraints.Update(step)
 
-	def _CheckConvergence(self,l,mse,grad,currentAlpha):
-		converged=False
-		convMem = 0.9
-		earlyCorrector = 1.0/(1.0 - pow(convMem,l+1))
-		
-		gNorm = np.linalg.norm(grad/len(self.ms))
-		self.gradMem = convMem * self.gradMem + (1.0 - convMem) * gNorm
-
-		if self.gradMem * earlyCorrector < self.GradientCriteria:
-			if self.Verbose:
-				print(f"Convergence Criteria met: Gradient flat ({self.gradMem:.4})")
-			converged = True
-		alphaCorrector = currentAlpha/self.alpha
-		self.scoreMem = convMem * self.scoreMem + (1.0 - convMem) * mse
-		scoreDelta = abs((mse - self.scoreMem)/self.scoreMem)
-		self.deltaScore = convMem * self.deltaScore + (1.0 - convMem) * scoreDelta
-		if self.deltaScore * earlyCorrector < self.ScoreCriteria:
-			if self.Verbose:
-				print(f"Convergence Criteria met: Function value stable at, {mse:.6} with mean change {100*self.deltaScore:.4}\%",l,alphaCorrector)
-			converged = True
-
-		if (l >= self.MaxSteps):
-			if self.Verbose:
-				print(f"Convergence Criteria met: Took {l} steps, reached {mse:.6}")
-			converged = True
-
-		## some extensions to the ADAM optimiser to make it take smaller steps when large oscillations
-		if l > 5:
-			if mse > self.prevScore:
-				self.AlphaTrigger += 2
-				if self.AlphaTrigger > 10:
-					currentAlpha *= 0.7
-					self.AlphaTrigger = 0
-					if currentAlpha < self.MinAlpha:
-						currentAlpha = self.MinAlpha
-						self.MinAlpha = self.MinAlpha * 0.5
-			else:
-				min = -5
-				self.AlphaTrigger = self.AlphaTrigger-1
-				if self.AlphaTrigger < min:
-					self.AlphaTrigger = 0
-					currentAlpha = currentAlpha * 1.05
-					if currentAlpha > self.MaxAlpha:
-						currentAlpha = self.MaxAlpha
-						self.MaxAlpha = self.MaxAlpha *2
-		return converged,currentAlpha
+	
 	def _Optimise(self, predictPoints):
-
 
 		#find a good initial position
 		self.Constraints.InitialPosition(self.p_blups)
-		
-		#initialise optimiser parameters
-		self.ms = np.zeros((self.Constraints.TransformDimension,))
-		self.vs = np.zeros((self.Constraints.TransformDimension,))
-
-
+		self.Optim.Start(self.Verbose)
 		#values for keeping track of convergence
-		self.gradMem = 0
-		self.scoreMem = 0
-		self.prevScore= 0
-		self.deltaScore = 0
+		
 		if self.Regulariser is not None:
 			self.p_clups = self.Binv@self.Constraints.Vector()
+		
 		minScore = self._ComputeScore(predictPoints)
 		mse = minScore
-		minC = np.array(self.Constraints._OptimiseVector[:])
-		
+		self.Constraints.SavePosition()
+		bc = self.Constraints.Vector()
 		#begin the optimisation loop
-		converged = False
-		currentAlpha = self.alpha
-		self.MinAlpha = currentAlpha/self.AlphaFactor
-		self.MaxAlpha = currentAlpha*self.AlphaFactor
-		self.AlphaTrigger = 0
+		# currentAlpha = self.alpha
+		# self.MinAlpha = currentAlpha/self.AlphaFactor
+		# self.MaxAlpha = currentAlpha*self.AlphaFactor
+		# self.AlphaTrigger = 0
 		l = 0
 		timeSinceDecrease = 0
 		timeTrigger = 1000
-		while not converged:
+		bestAngles= []
+		while not self.Optim.Converged:
 			#compute gradient
 			c = self.Constraints.Vector()
+
 			diff = self.Prefactor * self.DDtInv@(c - self.Bp_blub)
 			if self.Regulariser is not None:
-				self.p_clups = self.Binv.T@c
+				self.p_clups = self.Binv@c
 
-				diff += self.Binv @ self.Regulariser.dF(self.p_clups)
-				# pt.plot(predictPoints,self.p_clups)
-				# pt.pause(0.02)
-				# pt.draw()
-			dcdz = self.Constraints.Derivative()
-			grad = dcdz@ diff
-			self._Step(l,currentAlpha,grad)
+				diff += self.Binv.T @ self.Regulariser.dF(self.p_clups)
+			# if (l+1) % 1 == 0:
+			# 	# print()
+			# 	# print(currentAlpha,mse,np.linalg.norm(grad))
+			# 	print(c[:10].T)
+			# 	pt.plot(predictPoints,bc)
+			# 	pt.pause(0.02)
+			# 	pt.draw()
+			dcdw = self.Constraints.Derivative()
+			grad = dcdw.T@ diff
+			self.Optim.Corrections(l)
+			self.Constraints.Update(grad,self.Optim)
+			
 			#compute new score
-			self.prevScore = mse
+			
 			mse = self._ComputeScore(predictPoints)
 			
 			if mse < minScore:
 				minScore = mse
-				minC = np.array(self.Constraints._OptimiseVector)
-				timeSinceDecrease = 0
+				print(minScore)
+				self.Constraints.SavePosition()
+
+				diffnorm = np.linalg.norm(diff)
+				dcdwnorm =np.sum(np.abs(dcdw)**2,axis=-1)**(1./2)
+				dcdwnorm= dcdwnorm.reshape((len(dcdwnorm),1))
+				# angles = (grad / (diffnorm*dcdwnorm))
+				# angles[abs(diff) < 1e-2] += np.inf
+				# angles[abs(dcdwnorm) < 1e-2] += np.inf
+				# angles = np.arccos(angles)
+				# angles[~np.isfinite(angles)] = 0
+				# diffsave = diff
+				# bc = self.Constraints.Vector()
+				# print(l,"new best",mse,self.Optim.CurrentAlpha)
+				# pt.plot(predictPoints,bc)
+				# pt.pause(0.02)
+				# pt.draw()
 			# else:
 			# 	timeSinceDecrease = timeSinceDecrease +1
 			# 	# print(l,mse,timeSinceDecrease,minScore)
@@ -232,11 +273,14 @@ class Predictor:
 
 
 			l+=1
-			converged,currentAlpha = self._CheckConvergence(l,mse,grad,currentAlpha)
+			self.Optim._CheckConvergence(l,mse,grad)
 		
 		#set the parameter values to those which achieved the lowest score (in case of large oscillations)
-		self.Constraints._OptimiseVector[:] = minC
-		
+		self.Constraints.RecoverPosition()
+		c = self.Constraints.Vector()
+		# self.Convexity_Angles = angles
+		# self.Convexity_DCDW = dcdwnorm
+		# self.Convexity_dLdc = diffsave
 	def _ComputeScore(self,predictPoints):
 		c = self.Constraints.Vector()
 		corrector = self.PseudoInv@(c - self.Constraints.Matrix()@self.p_blups)	

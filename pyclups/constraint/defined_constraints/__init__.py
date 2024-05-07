@@ -6,3 +6,4 @@ from pyclups.constraint.defined_constraints.Integrable import *
 from pyclups.constraint.defined_constraints.Gradient_Bounded import *
 from pyclups.constraint.defined_constraints.Gradient_Monotonic import *
 from pyclups.constraint.defined_constraints.Curvature_Bounded import *
+from pyclups.constraint.defined_constraints.Gradient_Unimodal import *
